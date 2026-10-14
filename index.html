@@ -1,0 +1,451 @@
+<!doctype html><html><head><meta charset=utf8><meta name="robots" content="noindex"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Vos Racines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Prototype v2 (13/10/2026) : angle cadeau, offre unique. Layout : la page reprend la maison des livres eux-mêmes (papier ivoire, EB Garamond, rubriques rouge brique, couverture brun sombre et or). Geste fort : de vraies doubles pages d'un livre réalisé, à feuilleter. */
+:root{
+  --paper:#F3EDE1; --paper-2:#EBE3D4; --card:#FBF7EF;
+  --ink:#2A231D; --ink-soft:#6B5E50; --line:rgba(42,35,29,.16);
+  --night:#2A241F; --night-2:#3A322B; --on-night:#F1E9DA; --on-night-soft:#C9BCA8;
+  --gold:#C9A35C; --rubric:#9A4A36; --red:#9A4A36; --green:#4E7A55; --blue:#3E5F8A;
+  --seg-print:#4E7A55; --seg-tax:#9C9284; --seg-pay:#CFC6B8;
+  --f-serif:"EB Garamond", "Iowan Old Style", Georgia, serif;
+  --f-ui:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#1E1915; --paper-2:#262019; --card:#2C251E;
+  --ink:#EFE6D6; --ink-soft:#B9AB97; --line:rgba(239,230,214,.16);
+  --night:#14110E; --night-2:#2A231D; --on-night:#F1E9DA; --on-night-soft:#B9AB97;
+  --gold:#D8B46E; --rubric:#D98A72; --red:#D98A72; --green:#8DB894; --blue:#8FAAD3;
+  --seg-print:#8DB894; --seg-tax:#7A7064; --seg-pay:#4D453C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#1E1915; --paper-2:#262019; --card:#2C251E;
+  --ink:#EFE6D6; --ink-soft:#B9AB97; --line:rgba(239,230,214,.16);
+  --night:#14110E; --night-2:#2A231D; --on-night:#F1E9DA; --on-night-soft:#B9AB97;
+  --gold:#D8B46E; --rubric:#D98A72; --red:#D98A72; --green:#8DB894; --blue:#8FAAD3;
+  --seg-print:#8DB894; --seg-tax:#7A7064; --seg-pay:#4D453C; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-serif);font-size:19px;line-height:1.55;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px}
+h1,h2,h3{font-family:var(--f-serif);font-weight:500;line-height:1.15;text-wrap:balance;margin:0}
+h2{font-size:clamp(32px,4.6vw,46px)}
+h3{font-size:25px}
+p{margin:0}
+a{color:inherit}
+.rub{font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--rubric)}
+.orn{display:flex;align-items:center;gap:12px;margin-top:14px;color:var(--rubric);font-size:12px}
+.orn::before,.orn::after{content:"";height:1px;width:64px;background:currentColor;opacity:.45}
+.proto{background:var(--gold);color:#2A231D;font:500 13.5px var(--f-ui);text-align:center;padding:6px 16px}
+section{padding-block:76px}
+.lede{max-width:62ch;color:var(--ink-soft);font-size:20px}
+.btn{display:inline-flex;align-items:center;gap:8px;font:600 16px var(--f-ui);padding:13px 22px;border-radius:999px;border:1.5px solid var(--gold);background:var(--gold);color:#2A231D;text-decoration:none;cursor:pointer}
+.btn:hover{filter:brightness(1.06)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,.tab:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.btn.ghost{background:transparent;color:inherit}
+
+.night{background:var(--night);color:var(--on-night)}
+.night .rub{color:var(--gold)}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:20px}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none;line-height:1}
+.logo .mk{width:30px;height:30px;flex:none}
+.logo b{display:block;font-weight:500;font-size:27px}
+.logo small{display:block;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--on-night-soft);margin-top:5px}
+.hero{display:grid;grid-template-columns:1fr 1.05fr;gap:48px;align-items:center;padding-block:36px 72px}
+.hero > *{min-width:0}
+.hero h1{font-size:clamp(48px,7vw,84px);line-height:1.12;margin-top:22px;padding-top:.08em}
+.hero h1 em{color:var(--gold)}
+.hero p.sub{color:var(--on-night-soft);font-size:21px;max-width:44ch;margin-top:22px}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.hero .proof{margin-top:30px;display:flex;flex-wrap:wrap;gap:8px 22px;color:var(--on-night-soft);font:15px var(--f-ui)}
+.hero .proof span::before{content:"\25C6";color:var(--gold);font-size:10px;margin-right:8px;vertical-align:2px}
+.dos{margin:0}
+.dos img{display:block;width:100%;max-width:100%;height:auto;border-radius:3px;box-shadow:0 24px 50px -24px rgba(0,0,0,.7),0 0 0 1px rgba(241,233,218,.08)}
+.dos figcaption{margin-top:12px;font-style:italic;font-size:16px;color:var(--on-night-soft);text-align:center}
+
+.lignees{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:34px}
+.lg{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--c);padding:16px 16px 14px;border-radius:3px;min-width:0}
+.lg b{display:block;font-weight:600;font-size:19px}
+.lg span{display:block;color:var(--ink-soft);font-size:16px;font-style:italic}
+.note-l{margin-top:14px;color:var(--ink-soft);font-style:italic;font-size:17px}
+
+.tour{margin-top:44px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.tab{font:500 15px var(--f-ui);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink-soft);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.panel{display:grid;grid-template-columns:1.9fr 1fr;gap:32px;align-items:start;margin-top:26px}
+.panel > *{min-width:0}
+.panel img{display:block;width:100%;max-width:100%;height:auto;border:1px solid var(--line);box-shadow:0 18px 40px -26px rgba(42,35,29,.55);background:#fff}
+.panel h3{font-size:27px}
+.panel p{color:var(--ink-soft);margin-top:12px}
+.panel .pg{display:block;margin-top:14px;font:13.5px var(--f-ui);color:var(--ink-soft)}
+.src{margin-top:18px;font-style:italic;color:var(--ink-soft);font-size:16px}
+
+.why{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-top:36px}
+.why > *{min-width:0}
+.compare{display:grid;gap:14px}
+.cmp{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:18px 20px;border:1px solid var(--line);border-radius:4px;background:var(--card)}
+.cmp.us{border:2px solid var(--gold)}
+.cmp .who{font-weight:600}
+.cmp .price{font-size:32px;line-height:1;text-align:right}
+.cmp .what{color:var(--ink-soft);font-size:16.5px;grid-column:1/-1}
+.split h3{font-size:24px}
+.bar{display:flex;height:44px;border-radius:4px;overflow:hidden;margin-top:16px;border:1px solid var(--line)}
+.bar span{display:block;height:100%}
+.legend{display:grid;gap:10px;margin-top:16px;font-size:17px}
+.legend div{display:grid;grid-template-columns:14px 1fr auto;gap:10px;align-items:center}
+.legend i{width:14px;height:14px;border-radius:3px;display:block}
+.legend b{font-variant-numeric:tabular-nums lining-nums;font-weight:600}
+.small{font:13.5px var(--f-ui);color:var(--ink-soft);margin-top:12px}
+
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:40px 0 0;padding:0;border-top:1px solid var(--line)}
+.steps li{list-style:none;padding:20px 18px 0 0;position:relative;min-width:0}
+.steps li::before{content:"";position:absolute;top:-6px;left:0;width:11px;height:11px;border-radius:50%;background:var(--paper-2);border:2px solid var(--rubric)}
+.steps li:last-child::before{background:var(--gold);border-color:var(--gold)}
+.steps .n{font-size:14px;letter-spacing:.2em;color:var(--rubric)}
+.steps b{display:block;font-weight:600;font-size:19px;margin-top:4px}
+.steps span{display:block;color:var(--ink-soft);font-size:16.5px;margin-top:4px}
+.five{margin-top:34px;padding:22px 24px;border:1px solid var(--line);border-left:3px solid var(--rubric);background:var(--card);border-radius:3px}
+.five ol{margin:10px 0 0;padding-left:22px;display:grid;gap:4px;color:var(--ink-soft)}
+
+.offers{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;align-items:stretch}
+.offer{border:1px solid var(--line);border-radius:4px;padding:28px 24px;display:flex;flex-direction:column;gap:12px;background:var(--card);min-width:0}
+.offer.main{border:2px solid var(--gold)}
+.offer .name{font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--rubric)}
+.offer .price{font-size:56px;line-height:1;font-variant-numeric:lining-nums}
+.offer .price small{font-size:18px;color:var(--ink-soft)}
+.offer .count{font-weight:600}
+.offer ul{margin:0;padding-left:18px;color:var(--ink-soft);font-size:17px;display:grid;gap:6px}
+.offer .btn{margin-top:auto;justify-content:center}
+.extras{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:22px;color:var(--ink-soft);font-size:17px}
+.extras b{color:var(--ink);font-weight:600}
+
+.test{display:grid;grid-template-columns:.9fr 1.1fr;gap:48px;align-items:start}
+.test > *{min-width:0}
+.test .lede{color:var(--on-night-soft)}
+form{display:grid;gap:18px;background:var(--night-2);border-radius:6px;padding:28px;font-family:var(--f-ui)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row > *{min-width:0}
+label{display:grid;gap:6px;font-size:14.5px;color:var(--on-night-soft)}
+input,select{font:16px var(--f-ui);padding:11px 12px;border-radius:6px;border:1px solid rgba(241,233,218,.22);background:rgba(241,233,218,.06);color:var(--on-night);width:100%}
+select option{color:#2A231D}
+fieldset{border:1px solid rgba(241,233,218,.16);border-radius:6px;padding:14px 16px 16px;margin:0;display:grid;gap:12px;min-width:0}
+legend{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding:0 6px}
+.gp{display:grid;grid-template-columns:1.3fr 1.3fr .8fr;gap:10px}
+.gp > *{min-width:0}
+.gp .who{grid-column:1/-1;font-size:14px;color:var(--on-night)}
+.note{font:13.5px var(--f-ui);color:var(--on-night-soft)}
+.done{background:var(--night-2);border-radius:6px;padding:28px;display:grid;gap:12px;border:1.5px solid var(--gold);font-family:var(--f-ui)}
+.done h3{color:var(--gold);font-family:var(--f-serif)}
+.done dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:6px 0 0;font-size:15px}
+.done dt{color:var(--on-night-soft)}
+.done dd{margin:0}
+
+.faq{max-width:780px;margin-top:28px;display:grid}
+details{border-top:1px solid var(--line);padding-block:16px}
+details:last-child{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;font-weight:600;font-size:20px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::after{content:"+";color:var(--rubric)}
+details[open] summary::after{content:"\2212"}
+details p{color:var(--ink-soft);margin-top:10px;max-width:68ch}
+footer{padding-block:36px;font:14px var(--f-ui);color:var(--on-night-soft)}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:baseline}
+footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
+
+@media (max-width:900px){
+  .hero,.test,.why,.panel{grid-template-columns:1fr}
+  .lignees{grid-template-columns:1fr 1fr}
+  .steps{grid-template-columns:1fr;border-top:0;border-left:1px solid var(--line);margin-left:6px}
+  .steps li{padding:0 0 24px 22px}
+  .steps li::before{top:6px;left:-6px}
+  .offers{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .row,.gp{grid-template-columns:1fr}
+  section{padding-block:58px}
+  body{font-size:18px}
+}
+</style>
+
+<style>
+.engage{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:36px}
+.eg{padding:22px 22px 20px;border-top:2px solid var(--gold);background:var(--card);border-radius:3px;min-width:0}
+.eg b{display:block;font-weight:600;font-size:21px}
+.eg span{display:block;color:var(--ink-soft);font-size:17px;margin-top:6px}
+.ailleurs{margin-top:8px;display:grid;gap:12px}
+.ailleurs .lab{font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft)}
+.cmp.other{background:transparent;border-style:dashed}
+.chez{padding:22px 24px;border:2px solid var(--gold);border-radius:4px;background:var(--card)}
+.chez .lab{font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--rubric)}
+.chez p{margin-top:8px}
+.chez .big{font-size:40px;line-height:1.1;margin-top:6px}
+.opts{margin-top:38px;border:1px solid var(--line);border-radius:4px;background:var(--card);overflow-x:auto}
+.opts table{width:100%;border-collapse:collapse;font-size:17px;min-width:520px}
+.opts th,.opts td{text-align:left;padding:12px 18px;border-bottom:1px solid var(--line);vertical-align:top}
+.opts tr:last-child td{border-bottom:0}
+.opts th{font-weight:400;font-size:14px;letter-spacing:.2em;text-transform:uppercase;color:var(--rubric)}
+.opts td.p{white-space:nowrap;font-variant-numeric:lining-nums;font-weight:600;text-align:right}
+.opts td small{display:block;color:var(--ink-soft);font-size:15px}
+.offer .per{font-size:18px;color:var(--ink-soft)}
+@media (max-width:900px){.engage{grid-template-columns:1fr}}
+</style>
+
+<style>
+.gifts{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px}
+.gift{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--gold);padding:20px 20px 18px;border-radius:3px;min-width:0}
+.gift b{display:block;font-weight:600;font-size:21px}
+.gift span{display:block;color:var(--ink-soft);font-size:17px;margin-top:6px}
+.one{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;margin-top:40px;align-items:start}
+.one > *{min-width:0}
+.price-total{margin-top:6px;font:15px var(--f-ui);color:var(--ink-soft)}
+.cite{font:13px var(--f-ui);color:var(--ink-soft);margin-top:4px}
+.cite a{color:var(--ink-soft)}
+.one .opts table{min-width:0}.one .opts td.p{white-space:normal;min-width:80px}
+.qty{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+.qty input{width:84px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:var(--on-night-soft)}
+.chk input{width:auto;margin-top:3px}
+@media (max-width:900px){.gifts,.one{grid-template-columns:1fr}}
+</style>
+
+<div class="proto" role="note">Prototype de page : la commande n'est pas encore branchée, rien n'est envoyé ni payé.</div>
+
+<div class="night">
+  <div class="wrap">
+    <header class="top">
+      <a class="logo" href="#top" aria-label="Vos Racines, accueil">
+        <svg class="mk" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 4v10M15 14c-4 3-8 4-11 8M15 14c4 3 8 4 11 8M15 14c-1 5-3 9-6 12M15 14c1 5 3 9 6 12" fill="none" stroke="#C9A35C" stroke-width="1.5" stroke-linecap="round"/><path d="M15 2l2.2 2.2L15 6.4l-2.2-2.2z" fill="#C9A35C"/></svg>
+        <span><b>Vos Racines</b><small>Le livre de votre famille</small></span>
+      </a>
+      <a class="btn ghost" href="#offrir">Offrir</a>
+    </header>
+
+    <div class="hero" id="top">
+      <div>
+        <p class="rub">Un cadeau pour Noël, un anniversaire, une naissance</p>
+        <h1>Offrez-lui <em>ses racines</em>.</h1>
+        <p class="sub">Un livre qui raconte sa famille : les ancêtres retrouvés dans les registres, leurs actes, leurs villages, leurs métiers. Le cadeau qu'on garde, et qu'on se passe d'une génération à l'autre.</p>
+        <div class="ctas">
+          <a class="btn" href="#offrir">Offrir un livre, 49 €</a>
+          <a class="btn ghost" href="#livre">Feuilleter un exemple</a>
+        </div>
+        <div class="proof"><span>Livré en un mois</span><span>Remboursé si les archives sont trop pauvres</span><span>Rien sur les vivants</span></div>
+      </div>
+      <figure class="dos">
+        <img src="img/couverture.jpg" alt="Couverture d'un livre réalisé : le titre « Les racines de grand-mère » et un extrait de la carte de Cassini où deux villages sont cerclés à l'encre" width="1100" height="776">
+        <figcaption>La couverture d'un livre réalisé : les deux villages de la famille, cerclés sur la carte de Cassini, levée vers 1760.</figcaption>
+      </figure>
+    </div>
+  </div>
+</div>
+
+<main>
+  <section>
+    <div class="wrap">
+      <p class="rub">À qui l'offrir</p>
+      <h2>Un cadeau qui ne ressemble à aucun autre.</h2>
+      <div class="gifts">
+        <div class="gift"><b>Unique</b><span>Il n'existe qu'un seul livre comme celui-ci : écrit pour une famille, avec ses noms, ses villages, ses métiers. Personne d'autre ne l'aura.</span></div>
+        <div class="gift"><b>Émouvant</b><span>La signature d'un arrière-grand-père au bas d'un acte, le village dont on avait seulement entendu le nom : on le lit ensemble, et on se le raconte.</span></div>
+        <div class="gift"><b>Qui reste</b><span>Un beau livre relié qu'on garde, qu'on ressort aux réunions de famille et qu'on transmet aux enfants. Pas un objet de plus.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="livre" style="background:var(--paper-2)">
+    <div class="wrap">
+      <p class="rub">Ce que contient le livre</p>
+      <h2>Chaque lignée a son chapitre.</h2>
+      <p class="lede" style="margin-top:16px">Quatre grands-parents, ce sont quatre familles, souvent quatre régions. Le livre donne à chacune son arbre, son histoire, ses actes et ses villages, et les fait se rejoindre jusqu'à la personne qui le reçoit.</p>
+
+      <div class="tour">
+        <div class="tabs" role="tablist" aria-label="Feuilleter le livre">
+          <button class="tab" role="tab" id="t1" aria-controls="p1" aria-selected="true">L'arbre et le récit</button>
+          <button class="tab" role="tab" id="t2" aria-controls="p2" aria-selected="false" tabindex="-1">Les actes</button>
+          <button class="tab" role="tab" id="t3" aria-controls="p3" aria-selected="false" tabindex="-1">Les lieux</button>
+          <button class="tab" role="tab" id="t4" aria-controls="p4" aria-selected="false" tabindex="-1">Les records</button>
+        </div>
+        <div class="panel" role="tabpanel" id="p1" aria-labelledby="t1">
+          <img src="img/arbre-recit.jpg" alt="Double page : l'arbre du chapitre « Venus de Suisse » et le récit de la lignée" width="1400" height="494" loading="lazy">
+          <div><h3>L'arbre, puis le récit</h3><p>À gauche, la lignée de couple en couple. À droite, qui ils étaient, où ils vivaient, ce qui leur est arrivé, avec un repère dans l'histoire de France.</p><p>Ce que les actes prouvent est raconté ; ce qui ne l'est pas encore, le livre le dit.</p></div>
+        </div>
+        <div class="panel" role="tabpanel" id="p2" aria-labelledby="t2" hidden>
+          <img src="img/actes.jpg" alt="Double page : un acte de baptême de 1687 en latin et un acte de mariage de 1742, avec leur transcription" width="1400" height="494" loading="lazy">
+          <div><h3>Les actes, tels qu'on les lit</h3><p>Les actes photographiés dans les registres. Le passage qui compte est encadré, recopié avec l'orthographe du curé et traduit quand il est en latin.</p></div>
+        </div>
+        <div class="panel" role="tabpanel" id="p3" aria-labelledby="t3" hidden>
+          <img src="img/lieux.jpg" alt="Une page « Les lieux » avec un extrait de la carte de Cassini où deux villages sont cerclés à l'encre, et une carte ancienne des villages de la famille" width="1400" height="494" loading="lazy">
+          <div><h3>Les villages, sur les cartes de l'époque</h3><p>La carte des villages de la famille, où chaque cercle grandit avec le nombre d'actes ; puis chaque lignée sur une carte ancienne, Cassini sous Louis XV ou état-major au XIX<sup>e</sup> siècle, avec ses villages cerclés à l'encre.</p></div>
+        </div>
+        <div class="panel" role="tabpanel" id="p4" aria-labelledby="t4" hidden>
+          <img src="img/records.jpg" alt="Double page : les records de la famille et le calendrier des mariages" width="1400" height="494" loading="lazy">
+          <div><h3>Les records de la famille</h3><p>Le doyen et la doyenne, la plus grande fratrie, les plus jeunes mariés, le plus long mariage, et le calendrier des noces d'autrefois.</p></div>
+        </div>
+        <p class="src">Pages d'un livre réalisé en octobre 2026. Les noms des personnes ont été changés, y compris dans les transcriptions.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="ia">
+    <div class="wrap">
+      <p class="rub">Comment c'est possible</p>
+      <h2>Ce qui était réservé à quelques familles devient possible pour toutes.</h2>
+      <p class="lede" style="margin-top:16px">Retrouver un ancêtre, c'est déchiffrer des registres manuscrits, commune par commune. Une IA lit les archives et prépare le texte : c'est ce qui rend ce livre abordable, et nous ne le cachons pas. Chaque fait est relu, et vous relisez le livre avant l'impression.</p>
+      <div class="why">
+        <div class="ailleurs">
+          <span class="lab">Pour comparer</span>
+          <div class="cmp other"><span class="who">Une biographie familiale écrite par un biographe</span><span class="price">1 500 à 2 500 €</span><span class="what">prix moyen pratiqué par 69,5 % des biographes (étude Narrovita auprès de 220 biographes)</span><span class="cite">Source : <a href="https://publiersonlivre.fr/?p=8083">Publier son livre</a></span></div>
+          <div class="cmp other"><span class="who">Une recherche chez un généalogiste professionnel</span><span class="price">724 €</span><span class="what">en moyenne pour cinq générations, remise en dossier, sans livre</span><span class="cite">Source : <a href="https://www.rfgenealogie.com/infos/le-vrai-visage-des-genealogistes-professionnels-familiaux">Revue française de généalogie</a></span></div>
+        </div>
+        <div class="chez">
+          <span class="lab">Chez Vos Racines</span>
+          <p class="big">49 €</p>
+          <p>Le livre de la famille, écrit à partir des actes, livré en un mois.</p>
+          <a class="btn" href="#offrir" style="margin-top:18px">Offrir un livre</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:var(--paper-2)">
+    <div class="wrap">
+      <p class="rub">Comment ça se passe</p>
+      <h2>Vous offrez, on s'occupe du reste.</h2>
+      <ol class="steps">
+        <li><span class="n">I</span><b>Vous commandez</b><span>Pour vous, ou pour l'offrir. Si c'est une surprise, on fait tout avec vous.</span></li>
+        <li><span class="n">II</span><b>Un premier échange</b><span>Les noms, les lieux, les papiers et les photos de famille que vous avez : on amorce chaque branche.</span></li>
+        <li><span class="n">III</span><b>La recherche</b><span>Acte par acte, dans les registres paroissiaux et d'état civil.</span></li>
+        <li><span class="n">IV</span><b>Vous relisez</b><span>Le livre numérique d'abord ; on corrige ce que vous voulez avant l'impression.</span></li>
+        <li><span class="n">V</span><b>Le livre arrive</b><span>Un mois après le premier échange, puis les exemplaires reliés une dizaine de jours plus tard.</span></li>
+      </ol>
+      <div class="five" style="margin-bottom:24px">
+        <b>Le mur des premiers ancêtres</b>
+        <p style="margin-top:8px;color:var(--ink-soft)">Le plus difficile, ce sont souvent les premières générations. Les actes de moins de 75 ans ne sont en général pas en ligne : il faut les retrouver dans les papiers de famille ou les demander en mairie. Une fois ce mur franchi, les registres numérisés par les archives départementales permettent de remonter beaucoup plus vite, souvent jusqu'au XVIII<sup>e</sup> siècle, parfois au-delà. C'est pour cela que tout commence par un échange avec vous, et que nous remboursons si le mur ne cède pas.</p>
+      </div>
+      <div class="engage">
+        <div class="eg"><b>Livré en un mois</b><span>Le livre numérique un mois après notre premier échange ; les exemplaires imprimés suivent sous une dizaine de jours.</span></div>
+        <div class="eg"><b>Remboursé si les archives sont trop pauvres</b><span>Si, après le premier échange, les registres de votre famille ne permettent pas d'écrire un vrai livre, nous vous remboursons intégralement.</span></div>
+        <div class="eg"><b>Rien sur les vivants</b><span>Aucune recherche sur une personne vivante, à part ce que vous nous dites vous-même.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="offrir">
+    <div class="wrap">
+      <p class="rub">L'offre</p>
+      <h2>Un livre, et autant d'exemplaires que vous voulez.</h2>
+      <div class="one">
+        <div class="offer main">
+          <p class="name">Le livre de la famille</p>
+          <p class="price">49 €</p>
+          <ul><li>Un chapitre par lignée : l'arbre, le récit, les actes, les villages</li><li>Les records, les prénoms, les métiers et les noms de la famille</li><li>Le livre numérique (PDF), à relire avant impression</li></ul>
+          <p class="price-total">Les exemplaires reliés se commandent ensuite, une fois le livre vu en numérique.</p>
+          <a class="btn" href="#commande">Commander</a>
+        </div>
+        <div class="opts" role="region" aria-label="Exemplaires et option" tabindex="0" style="margin-top:0">
+          <table>
+            <thead><tr><th>En plus, si vous voulez</th><th style="text-align:right">Prix</th></tr></thead>
+            <tbody>
+              <tr><td>Exemplaire imprimé et relié<small>couverture rigide, à commander une fois le livre numérique relu, autant que vous voulez, chacun envoyé à l'adresse de votre choix</small></td><td class="p">29 € l'unité</td></tr>
+              <tr><td>Le dossier complet<small>tous les actes retrouvés en numérique, avec leur transcription, et l'arbre complet</small></td><td class="p">39 €</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="extras">
+        <span><b>Carte cadeau</b> pour offrir sans rien savoir des noms : la surprise est gardée jusqu'au livre</span>
+        <span><b>Pour Noël</b> commandez avant le 15 novembre</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="night" id="commande">
+    <div class="wrap test">
+      <div>
+        <p class="rub">Commander</p>
+        <h2>Commençons son arbre.</h2>
+        <p class="lede" style="margin-top:16px">Le paiement se fait sur une page sécurisée. Ensuite, nous vous écrivons pour fixer le premier échange.</p>
+        <p class="note" style="margin-top:20px">Ces informations servent uniquement à préparer le livre.</p>
+      </div>
+      <div>
+        <form id="f" novalidate>
+          <div class="row">
+            <label for="pourqui">Le livre est<select id="pourqui"><option value="offrir">à offrir</option><option value="moi">pour moi</option><option value="reunion">pour une réunion de famille</option><option value="carte">une carte cadeau</option></select></label>
+            <label class="chk" for="dossier" style="align-self:end"><input id="dossier" type="checkbox"> Ajouter le dossier complet, tous les actes en numérique (39 €)</label>
+          </div>
+          <label for="email">Votre e-mail<input id="email" name="email" type="email" autocomplete="email" required></label>
+          <p class="note">Sur la page de paiement, on vous demandera pour qui est le livre et, si vous les connaissez, les noms de famille de ses parents. Le reste se construit au premier échange.</p>
+          <p class="note" id="total">Total : 49 €</p><p class="note">Un code promo ? Vous pourrez le saisir sur la page de paiement.</p>
+          <p class="note" id="err" hidden>Il nous faut une adresse e-mail valide.</p>
+          <button class="btn" type="submit">Passer au paiement</button>
+        </form>
+        <div class="done" id="done" hidden>
+          <h3>Merci, c'est noté.</h3>
+          <p>Le paiement n'est pas encore ouvert : vous serez redirigé vers la page de paiement sécurisée dès qu'il le sera.</p>
+          <dl id="recap"></dl>
+          <p class="note">Prototype : rien n'a été envoyé ni payé.</p>
+          <button class="btn ghost" type="button" id="again">Modifier</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="rub">Questions</p>
+      <h2>Ce qu'on nous demande.</h2>
+      <div class="faq">
+        <details><summary>Combien de temps faut-il ?</summary><p>Un mois entre notre premier échange et le livre numérique ; les exemplaires imprimés arrivent environ dix jours plus tard. Pour Noël, commandez avant le 15 novembre, ou offrez une carte cadeau.</p></details>
+        <details><summary>Je veux faire une surprise : comment faire ?</summary><p>Le premier échange se fait avec vous : ce que vous savez suffit souvent pour démarrer. Si vous ne savez presque rien, offrez une carte cadeau : la personne répond à quelques questions sur sa famille, dans un espace qui ne lui révèle pas la nature du cadeau. La surprise est gardée jusqu'au livre.</p></details>
+        <details><summary>Et si on ne trouve pas grand-chose ?</summary><p>Certaines communes ont perdu leurs registres, certaines familles viennent de l'étranger. Si, après le premier échange, les archives ne permettent pas d'écrire un vrai livre, nous vous remboursons intégralement.</p></details>
+        <details><summary>Combien d'exemplaires peut-on commander ?</summary><p>Autant que vous voulez, à 29 € l'exemplaire relié, chacun envoyé à l'adresse de votre choix : un par enfant, un par branche de la famille. Vous les commandez une fois que vous avez vu et relu le livre au format numérique.</p></details>
+        <details><summary>Avez-vous des codes promo ?</summary><p>Si vous en avez un, vous le saisissez au moment du paiement.</p></details>
+        <details><summary>Où cherchez-vous ?</summary><p>Dans les registres paroissiaux et d'état civil numérisés par les archives départementales, complétés par les registres matricules militaires et les recensements.</p></details>
+        <details><summary>Tout est-il prouvé ?</summary><p>Ce que racontent les chapitres vient des actes. Quand un fait vient d'un arbre publié par d'autres chercheurs et n'a pas encore été vérifié, le livre le dit.</p></details>
+        <details><summary>Quelle place pour l'IA ?</summary><p>Une IA lit les registres et prépare le texte : c'est ce qui rend ce livre abordable. Tout est relu avant d'entrer dans le livre, et vous relisez le livre avant impression.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="night">
+  <div class="wrap"><span class="brand">Vos Racines</span><span>vosracines.fr · <a href="mentions-legales.html">Mentions légales</a> · <a href="cgv.html">Conditions de vente</a> · <a href="confidentialite.html">Confidentialité</a></span></div>
+</footer>
+
+<script>
+/* Paiement : liens de paiement Stripe (Payment Links), codes promo activés dans Stripe.
+   Remplacer les deux URL ci-dessous par celles créées dans le tableau de bord Stripe. */
+var STRIPE = { livre: '', livre_dossier: '' };
+(function(){
+  var tabs=[].slice.call(document.querySelectorAll('.tab'));
+  function show(t){tabs.forEach(function(x){var on=x===t;x.setAttribute('aria-selected',on?'true':'false');x.tabIndex=on?0:-1;document.getElementById(x.getAttribute('aria-controls')).hidden=!on;});}
+  tabs.forEach(function(t,i){
+    t.addEventListener('click',function(){show(t);});
+    t.addEventListener('keydown',function(e){var j=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:null;if(j===null)return;j=(j+tabs.length)%tabs.length;tabs[j].focus();show(tabs[j]);e.preventDefault();});
+  });
+  function v(id){return (document.getElementById(id).value||'').trim();}
+  var dos=document.getElementById('dossier');
+  function total(){var t=49+(dos.checked?39:0);document.getElementById('total').textContent='Total : '+t+' €';return t;}
+  dos.addEventListener('change',total);
+  var f=document.getElementById('f'), done=document.getElementById('done'), err=document.getElementById('err');
+  f.addEventListener('submit',function(e){
+    e.preventDefault();
+    var email=v('email');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){err.hidden=false;return;}
+    err.hidden=true;
+    var link=dos.checked?STRIPE.livre_dossier:STRIPE.livre;
+    if(link){
+      var u=link+(link.indexOf('?')<0?'?':'&')+'prefilled_email='+encodeURIComponent(email)+'&client_reference_id='+encodeURIComponent(v('pourqui'));
+      window.location.href=u; return;
+    }
+    var recap=document.getElementById('recap'); recap.textContent='';
+    [['Le livre est',document.getElementById('pourqui').selectedOptions[0].text],['Dossier complet',dos.checked?'oui':'non'],['Total',total()+' €'],['Contact',email]].forEach(function(r){var dt=document.createElement('dt');dt.textContent=r[0];var dd=document.createElement('dd');dd.textContent=r[1];recap.appendChild(dt);recap.appendChild(dd);});
+    f.hidden=true; done.hidden=false;
+  });
+  document.getElementById('again').addEventListener('click',function(){done.hidden=true;f.hidden=false;});
+})();
+</script>
+
+</body></html>
