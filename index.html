@@ -234,7 +234,7 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
         <div class="proof"><span>Livré en un mois</span><span>Remboursé si les archives sont trop pauvres</span><span>Rien sur les vivants</span></div>
       </div>
       <figure class="dos">
-        <img src="img/couverture.jpg" alt="Couverture d'un livre réalisé : le titre « Les racines de grand-mère » et un extrait de la carte de Cassini où deux villages sont cerclés à l'encre" width="1100" height="776">
+        <img src="img/couverture.jpg" alt="Couverture d'un livre réalisé : le titre « Les racines de Mamie » et une carte ancienne de la région où chaque village de la famille est marqué" width="1100" height="776">
         <figcaption>La couverture d'un livre réalisé : les deux villages de la famille, cerclés sur la carte de Cassini, levée vers 1760.</figcaption>
       </figure>
     </div>
@@ -300,7 +300,7 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
           <div class="cmp other"><span class="who">Une recherche chez un généalogiste professionnel</span><span class="price">724 €</span><span class="what">en moyenne pour cinq générations, remise en dossier, sans livre</span><span class="cite">Source : <a href="https://www.rfgenealogie.com/infos/le-vrai-visage-des-genealogistes-professionnels-familiaux">Revue française de généalogie</a></span></div>
         </div>
         <div class="chez">
-          <span class="lab">Chez Vos Racines</span>
+          <span class="lab">Chez <i>Vos Racines</i></span>
           <p class="big">49 €</p>
           <p>Le livre de la famille, écrit à partir des actes, livré en un mois.</p>
           <a class="btn" href="#offrir" style="margin-top:18px">Offrir un livre</a>
@@ -349,7 +349,7 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
             <thead><tr><th>En plus, si vous voulez</th><th style="text-align:right">Prix</th></tr></thead>
             <tbody>
               <tr><td>Exemplaire imprimé et relié<small>couverture rigide, à commander une fois le livre numérique relu, autant que vous voulez, chacun envoyé à l'adresse de votre choix</small></td><td class="p">29 € l'unité</td></tr>
-              <tr><td>Le dossier complet<small>tous les actes retrouvés en numérique, avec leur transcription, et l'arbre complet</small></td><td class="p">39 €</td></tr>
+              <tr><td>Le dossier complet<small>tous les actes retrouvés en numérique, avec leur transcription, et l'arbre complet ; à ajouter si vous voulez au moment de commander les exemplaires</small></td><td class="p">39 €</td></tr>
             </tbody>
           </table>
         </div>
@@ -373,10 +373,9 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
         <form id="f" novalidate>
           <div class="row">
             <label for="pourqui">Le livre est<select id="pourqui"><option value="offrir">à offrir</option><option value="moi">pour moi</option><option value="reunion">pour une réunion de famille</option><option value="carte">une carte cadeau</option></select></label>
-            <label class="chk" for="dossier" style="align-self:end"><input id="dossier" type="checkbox"> Ajouter le dossier complet, tous les actes en numérique (39 €)</label>
           </div>
           <label for="email">Votre e-mail<input id="email" name="email" type="email" autocomplete="email" required></label>
-          <p class="note">Sur la page de paiement, on vous demandera pour qui est le livre et, si vous les connaissez, les noms de famille de ses parents. Le reste se construit au premier échange.</p>
+          <p class="note">Sur la page de paiement, on vous demandera pour qui est le livre. Le reste se construit au premier échange.</p>
           <p class="note" id="total">Total : 49 €</p><p class="note">Un code promo ? Vous pourrez le saisir sur la page de paiement.</p>
           <p class="note" id="err" hidden>Il nous faut une adresse e-mail valide.</p>
           <button class="btn" type="submit">Passer au paiement</button>
@@ -426,7 +425,7 @@ var STRIPE = { livre: 'https://buy.stripe.com/test_dRm4gA9dY7wz12n9Dw9R600', liv
     t.addEventListener('keydown',function(e){var j=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:null;if(j===null)return;j=(j+tabs.length)%tabs.length;tabs[j].focus();show(tabs[j]);e.preventDefault();});
   });
   function v(id){return (document.getElementById(id).value||'').trim();}
-  var dos=document.getElementById('dossier');
+  var dos={checked:false,addEventListener:function(){}};
   function total(){var t=49+(dos.checked?39:0);document.getElementById('total').textContent='Total : '+t+' €';return t;}
   dos.addEventListener('change',total);
   var f=document.getElementById('f'), done=document.getElementById('done'), err=document.getElementById('err');
@@ -441,7 +440,7 @@ var STRIPE = { livre: 'https://buy.stripe.com/test_dRm4gA9dY7wz12n9Dw9R600', liv
       window.location.href=u; return;
     }
     var recap=document.getElementById('recap'); recap.textContent='';
-    [['Le livre est',document.getElementById('pourqui').selectedOptions[0].text],['Dossier complet',dos.checked?'oui':'non'],['Total',total()+' €'],['Contact',email]].forEach(function(r){var dt=document.createElement('dt');dt.textContent=r[0];var dd=document.createElement('dd');dd.textContent=r[1];recap.appendChild(dt);recap.appendChild(dd);});
+    [['Le livre est',document.getElementById('pourqui').selectedOptions[0].text],['Total',total()+' €'],['Contact',email]].forEach(function(r){var dt=document.createElement('dt');dt.textContent=r[0];var dd=document.createElement('dd');dd.textContent=r[1];recap.appendChild(dt);recap.appendChild(dd);});
     f.hidden=true; done.hidden=false;
   });
   document.getElementById('again').addEventListener('click',function(){done.hidden=true;f.hidden=false;});
