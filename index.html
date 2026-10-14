@@ -417,7 +417,7 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
 <script>
 /* Paiement : liens de paiement Stripe (Payment Links), codes promo activés dans Stripe.
    Remplacer les deux URL ci-dessous par celles créées dans le tableau de bord Stripe. */
-var STRIPE = { livre: '', livre_dossier: '' };
+var STRIPE = { livre: 'https://buy.stripe.com/test_dRm4gA9dY7wz12n9Dw9R600', livre_dossier: '' }; // TEST : remplacer par les liens de production apres activation
 (function(){
   var tabs=[].slice.call(document.querySelectorAll('.tab'));
   function show(t){tabs.forEach(function(x){var on=x===t;x.setAttribute('aria-selected',on?'true':'false');x.tabIndex=on?0:-1;document.getElementById(x.getAttribute('aria-controls')).hidden=!on;});}
