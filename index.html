@@ -74,6 +74,7 @@ header.top{display:flex;justify-content:space-between;align-items:center;gap:16p
 .tour{margin-top:44px}
 .tabs{display:flex;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--line);padding-bottom:12px}
 .tab{font:500 15px var(--f-ui);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink-soft);cursor:pointer}
+.pq{border:0;padding:0;margin:0 0 18px;display:flex;flex-wrap:wrap;gap:8px}.pq legend{font:500 15px var(--f-ui);color:var(--ink-soft);margin-bottom:8px;padding:0}.pq label{display:inline-flex;cursor:pointer;margin:0}.pq input{position:absolute;opacity:0;width:1px;height:1px}.pq span{font:500 15.5px var(--f-ui);padding:9px 16px;border-radius:999px;border:1px solid var(--line);color:var(--ink-soft);background:transparent}.pq input:checked+span{background:var(--ink);color:var(--paper);border-color:var(--ink)}.pq input:focus-visible+span{outline:3px solid var(--gold);outline-offset:3px}
 .tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .panel{display:grid;grid-template-columns:1.9fr 1fr;gap:32px;align-items:start;margin-top:26px}
 .panel > *{min-width:0}
@@ -372,10 +373,10 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
       <div>
         <form id="f" novalidate>
           <div class="row">
-            <label for="pourqui">Le livre est<select id="pourqui"><option value="offrir">à offrir</option><option value="moi">pour moi</option><option value="reunion">pour une réunion de famille</option><option value="carte">une carte cadeau</option></select></label>
+            <fieldset class="pq"><legend>Ce livre est</legend><label><input type="radio" name="pourqui" value="moi" checked><span>Pour moi</span></label><label><input type="radio" name="pourqui" value="offrir"><span>À offrir</span></label><label><input type="radio" name="pourqui" value="reunion"><span>Pour une réunion de famille</span></label><label><input type="radio" name="pourqui" value="carte"><span>Une carte cadeau</span></label></fieldset>
           </div>
           <label for="email">Votre e-mail<input id="email" name="email" type="email" autocomplete="email" required></label>
-          <p class="note">Sur la page de paiement, on vous demandera pour qui est le livre. Le reste se construit au premier échange.</p>
+          <p class="note" id="pqnote">C'est votre propre famille : rien d'autre à préciser, tout se construit au premier échange.</p>
           <p class="note" id="total">Total : 49 €</p><p class="note">Un code promo ? Vous pourrez le saisir sur la page de paiement.</p>
           <p class="note" id="err" hidden>Il nous faut une adresse e-mail valide.</p>
           <button class="btn" type="submit">Passer au paiement</button>
@@ -424,6 +425,9 @@ var STRIPE = { livre: 'https://buy.stripe.com/test_dRm4gA9dY7wz12n9Dw9R600', liv
     t.addEventListener('click',function(){show(t);});
     t.addEventListener('keydown',function(e){var j=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:null;if(j===null)return;j=(j+tabs.length)%tabs.length;tabs[j].focus();show(tabs[j]);e.preventDefault();});
   });
+  function pq(){return document.querySelector('input[name=pourqui]:checked');}
+  var PQN={moi:"C'est votre propre famille : rien d'autre à préciser, tout se construit au premier échange.",offrir:"Sur la page de paiement, indiquez le prénom de la personne à qui vous l'offrez.",reunion:"Sur la page de paiement, dites-nous quelle famille et quelle occasion.",carte:"La personne recevra une carte et construira son livre avec nous."};
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=pourqui]'),function(r){r.addEventListener('change',function(){document.getElementById('pqnote').textContent=PQN[pq().value];});});
   function v(id){return (document.getElementById(id).value||'').trim();}
   var dos={checked:false,addEventListener:function(){}};
   function total(){var t=49+(dos.checked?39:0);document.getElementById('total').textContent='Total : '+t+' €';return t;}
@@ -436,11 +440,11 @@ var STRIPE = { livre: 'https://buy.stripe.com/test_dRm4gA9dY7wz12n9Dw9R600', liv
     err.hidden=true;
     var link=dos.checked?STRIPE.livre_dossier:STRIPE.livre;
     if(link){
-      var u=link+(link.indexOf('?')<0?'?':'&')+'prefilled_email='+encodeURIComponent(email)+'&client_reference_id='+encodeURIComponent(v('pourqui'));
+      var u=link+(link.indexOf('?')<0?'?':'&')+'prefilled_email='+encodeURIComponent(email)+'&client_reference_id='+encodeURIComponent(pq().value);
       window.location.href=u; return;
     }
     var recap=document.getElementById('recap'); recap.textContent='';
-    [['Le livre est',document.getElementById('pourqui').selectedOptions[0].text],['Total',total()+' €'],['Contact',email]].forEach(function(r){var dt=document.createElement('dt');dt.textContent=r[0];var dd=document.createElement('dd');dd.textContent=r[1];recap.appendChild(dt);recap.appendChild(dd);});
+    [['Le livre est',pq().parentNode.textContent],['Total',total()+' €'],['Contact',email]].forEach(function(r){var dt=document.createElement('dt');dt.textContent=r[0];var dd=document.createElement('dd');dd.textContent=r[1];recap.appendChild(dt);recap.appendChild(dd);});
     f.hidden=true; done.hidden=false;
   });
   document.getElementById('again').addEventListener('click',function(){done.hidden=true;f.hidden=false;});
