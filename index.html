@@ -316,7 +316,7 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
       <h2>Vous offrez, on s'occupe du reste.</h2>
       <ol class="steps">
         <li><span class="n">I</span><b>Vous commandez</b><span>Pour vous, ou pour l'offrir. Si c'est une surprise, on fait tout avec vous.</span></li>
-        <li><span class="n">II</span><b>Un premier échange</b><span>Les noms, les lieux, les papiers et les photos de famille que vous avez : on amorce chaque branche.</span></li>
+        <li><span class="n">II</span><b>Un premier échange, par mail</b><span>Notre archiviste vous écrit : les noms, les lieux, les papiers et les photos de famille que vous avez. On amorce chaque branche.</span></li>
         <li><span class="n">III</span><b>La recherche</b><span>Acte par acte, dans les registres paroissiaux et d'état civil.</span></li>
         <li><span class="n">IV</span><b>Vous relisez</b><span>Le livre numérique d'abord ; on corrige ce que vous voulez avant l'impression.</span></li>
         <li><span class="n">V</span><b>Le livre arrive</b><span>Un mois après le premier échange, puis les exemplaires reliés une dizaine de jours plus tard.</span></li>
@@ -367,7 +367,7 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
       <div>
         <p class="rub">Commander</p>
         <h2>Commençons son arbre.</h2>
-        <p class="lede" style="margin-top:16px">Le paiement se fait sur une page sécurisée. Ensuite, nous vous écrivons pour fixer le premier échange.</p>
+        <p class="lede" style="margin-top:16px">Le paiement se fait sur une page sécurisée. Ensuite, notre archiviste vous écrit : tout se passe par mail.</p>
         <p class="note" style="margin-top:20px">Ces informations servent uniquement à préparer le livre.</p>
       </div>
       <div>
@@ -381,7 +381,7 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
             <label for="demail">Son e-mail<input id="demail" name="demail" type="email" autocomplete="off"></label>
           </div>
           <label for="email">Votre e-mail<input id="email" name="email" type="email" autocomplete="email" required></label>
-          <p class="note" id="pqnote">C'est votre propre famille : rien d'autre à préciser, tout se construit au premier échange.</p>
+          <p class="note" id="pqnote">C'est votre propre famille : rien d'autre à préciser : notre archiviste vous écrit par mail juste après.</p>
           <p class="note" id="total">Total : 49 €</p><p class="note">Un code promo ? Vous pourrez le saisir sur la page de paiement.</p>
           <p class="note" id="err" hidden></p>
           <button class="btn" type="submit">Passer au paiement</button>
@@ -403,7 +403,7 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
       <h2>Ce qu'on nous demande.</h2>
       <div class="faq">
         <details><summary>Combien de temps faut-il ?</summary><p>Un mois entre notre premier échange et le livre numérique ; les exemplaires imprimés arrivent environ dix jours plus tard. Pour Noël, commandez avant le 15 novembre, ou offrez une carte cadeau.</p></details>
-        <details><summary>Je veux faire une surprise : comment faire ?</summary><p>Le premier échange se fait avec vous : ce que vous savez suffit souvent pour démarrer. Si vous ne savez presque rien, offrez une carte cadeau : la personne répond à quelques questions sur sa famille, dans un espace qui ne lui révèle pas la nature du cadeau. La surprise est gardée jusqu'au livre.</p></details>
+        <details><summary>Je veux faire une surprise : comment faire ?</summary><p>Le premier échange se fait avec vous : ce que vous savez suffit souvent pour démarrer. Si vous ne savez presque rien, offrez une carte cadeau : notre archiviste pose par mail quelques questions sur sa famille à la personne, sans lui révéler la nature du cadeau. La surprise est gardée jusqu'au livre.</p></details>
         <details><summary>Et si on ne trouve pas grand-chose ?</summary><p>Certaines communes ont perdu leurs registres, certaines familles viennent de l'étranger. Si, après le premier échange, les archives ne permettent pas d'écrire un vrai livre, nous vous remboursons intégralement.</p></details>
         <details><summary>Combien d'exemplaires peut-on commander ?</summary><p>Autant que vous voulez, à 29 € l'exemplaire relié, chacun envoyé à l'adresse de votre choix : un par enfant, un par branche de la famille. Vous les commandez une fois que vous avez vu et relu le livre au format numérique.</p></details>
         <details><summary>Avez-vous des codes promo ?</summary><p>Si vous en avez un, vous le saisissez au moment du paiement.</p></details>
@@ -435,11 +435,11 @@ var STRIPE = { livre: 'https://buy.stripe.com/test_dRm4gA9dY7wz12n9Dw9R600', liv
   function v(id){return (document.getElementById(id).value||'').trim();}
   function lab(name,val){var i=document.querySelector('input[name='+name+'][value='+val+']');return i?i.parentNode.textContent:'';}
   var NOTE={
-    moi:"C'est votre propre famille : rien d'autre à préciser, tout se construit au premier échange.",
+    moi:"C'est votre propre famille : rien d'autre à préciser : notre archiviste vous écrit par mail juste après.",
     offrir_moi:"Vous nous racontez la famille, en secret : le livre reste une surprise.",
     offrir_dest:"Nous écrirons à cette personne pour construire son livre avec elle. Vous serez en copie de nos échanges ; le livre ne sera donc plus une surprise.",
-    reunion:"Vous nous racontez la famille ; dites-nous au premier échange quelle occasion se prépare.",
-    carte:"Nous écrirons à cette personne pour lui annoncer le cadeau et construire son livre avec elle. Vous serez en copie."};
+    reunion:"Vous nous racontez la famille ; dites-nous par mail quelle occasion se prépare.",
+    carte:"Notre archiviste écrira à cette personne pour lui poser quelques questions sur sa famille, sans lui dévoiler la nature du cadeau. Vous serez en copie."};
   function maj(){
     var p=pq(), q=qui();
     document.getElementById('quibloc').hidden=(p!=='offrir');
