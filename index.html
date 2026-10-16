@@ -74,7 +74,7 @@ header.top{display:flex;justify-content:space-between;align-items:center;gap:16p
 .tour{margin-top:44px}
 .tabs{display:flex;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--line);padding-bottom:12px}
 .tab{font:500 15px var(--f-ui);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink-soft);cursor:pointer}
-.pq{border:0;padding:0;margin:0 0 18px;display:flex;flex-wrap:wrap;gap:8px}.pq legend{font:500 15px var(--f-ui);color:var(--ink-soft);margin-bottom:8px;padding:0}.pq label{display:inline-flex;cursor:pointer;margin:0}.pq input{position:absolute;opacity:0;width:1px;height:1px}.pq span{font:500 15.5px var(--f-ui);padding:9px 16px;border-radius:999px;border:1px solid var(--line);color:var(--ink-soft);background:transparent}.pq input:checked+span{background:var(--ink);color:var(--paper);border-color:var(--ink)}.pq input:focus-visible+span{outline:3px solid var(--gold);outline-offset:3px}
+.pq[hidden],#destbloc[hidden]{display:none}.pq{border:0;padding:0;margin:0 0 18px;display:flex;flex-wrap:wrap;gap:8px}.pq legend{font:500 15px var(--f-ui);color:var(--ink-soft);margin-bottom:8px;padding:0}.pq label{display:inline-flex;cursor:pointer;margin:0}.pq input{position:absolute;opacity:0;width:1px;height:1px}.pq span{font:500 15.5px var(--f-ui);padding:9px 16px;border-radius:999px;border:1px solid var(--line);color:var(--ink-soft);background:transparent}.pq input:checked+span{background:var(--ink);color:var(--paper);border-color:var(--ink)}.pq input:focus-visible+span{outline:3px solid var(--gold);outline-offset:3px}
 .tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .panel{display:grid;grid-template-columns:1.9fr 1fr;gap:32px;align-items:start;margin-top:26px}
 .panel > *{min-width:0}
@@ -375,10 +375,15 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
           <div class="row">
             <fieldset class="pq"><legend>Ce livre est</legend><label><input type="radio" name="pourqui" value="moi" checked><span>Pour moi</span></label><label><input type="radio" name="pourqui" value="offrir"><span>À offrir</span></label><label><input type="radio" name="pourqui" value="reunion"><span>Pour une réunion de famille</span></label><label><input type="radio" name="pourqui" value="carte"><span>Une carte cadeau</span></label></fieldset>
           </div>
+          <fieldset class="pq" id="quibloc" hidden><legend>Qui nous racontera la famille ?</legend><label><input type="radio" name="qui" value="moi" checked><span>Moi, qui l'offre</span></label><label><input type="radio" name="qui" value="dest"><span>La personne qui le reçoit</span></label></fieldset>
+          <div id="destbloc" hidden>
+            <label for="dprenom">Son prénom<input id="dprenom" name="dprenom" type="text" autocomplete="off"></label>
+            <label for="demail">Son e-mail<input id="demail" name="demail" type="email" autocomplete="off"></label>
+          </div>
           <label for="email">Votre e-mail<input id="email" name="email" type="email" autocomplete="email" required></label>
           <p class="note" id="pqnote">C'est votre propre famille : rien d'autre à préciser, tout se construit au premier échange.</p>
           <p class="note" id="total">Total : 49 €</p><p class="note">Un code promo ? Vous pourrez le saisir sur la page de paiement.</p>
-          <p class="note" id="err" hidden>Il nous faut une adresse e-mail valide.</p>
+          <p class="note" id="err" hidden></p>
           <button class="btn" type="submit">Passer au paiement</button>
         </form>
         <div class="done" id="done" hidden>
@@ -425,26 +430,51 @@ var STRIPE = { livre: 'https://buy.stripe.com/test_dRm4gA9dY7wz12n9Dw9R600', liv
     t.addEventListener('click',function(){show(t);});
     t.addEventListener('keydown',function(e){var j=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:null;if(j===null)return;j=(j+tabs.length)%tabs.length;tabs[j].focus();show(tabs[j]);e.preventDefault();});
   });
-  function pq(){return document.querySelector('input[name=pourqui]:checked');}
-  var PQN={moi:"C'est votre propre famille : rien d'autre à préciser, tout se construit au premier échange.",offrir:"Sur la page de paiement, indiquez le prénom de la personne à qui vous l'offrez.",reunion:"Sur la page de paiement, dites-nous quelle famille et quelle occasion.",carte:"La personne recevra une carte et construira son livre avec nous."};
-  Array.prototype.forEach.call(document.querySelectorAll('input[name=pourqui]'),function(r){r.addEventListener('change',function(){document.getElementById('pqnote').textContent=PQN[pq().value];});});
+  function pq(){return document.querySelector('input[name=pourqui]:checked').value;}
+  function qui(){var p=pq();if(p==='carte')return 'dest';if(p==='offrir')return document.querySelector('input[name=qui]:checked').value;return 'moi';}
   function v(id){return (document.getElementById(id).value||'').trim();}
+  function lab(name,val){var i=document.querySelector('input[name='+name+'][value='+val+']');return i?i.parentNode.textContent:'';}
+  var NOTE={
+    moi:"C'est votre propre famille : rien d'autre à préciser, tout se construit au premier échange.",
+    offrir_moi:"Vous nous racontez la famille, en secret : le livre reste une surprise.",
+    offrir_dest:"Nous écrirons à cette personne pour construire son livre avec elle. Vous serez en copie de nos échanges ; le livre ne sera donc plus une surprise.",
+    reunion:"Vous nous racontez la famille ; dites-nous au premier échange quelle occasion se prépare.",
+    carte:"Nous écrirons à cette personne pour lui annoncer le cadeau et construire son livre avec elle. Vous serez en copie."};
+  function maj(){
+    var p=pq(), q=qui();
+    document.getElementById('quibloc').hidden=(p!=='offrir');
+    document.getElementById('destbloc').hidden=(q!=='dest');
+    document.getElementById('pqnote').textContent=NOTE[p==='offrir'?'offrir_'+q:p];
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=pourqui],input[name=qui]'),function(r){r.addEventListener('change',maj);});
+  maj();
+  function b64url(str){var b=new TextEncoder().encode(str),bin='';b.forEach(function(x){bin+=String.fromCharCode(x);});return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+  var RE=/^[^@\s]+@[^@\s]+\.[^@\s]+$/;
   var dos={checked:false,addEventListener:function(){}};
   function total(){var t=49+(dos.checked?39:0);document.getElementById('total').textContent='Total : '+t+' €';return t;}
-  dos.addEventListener('change',total);
   var f=document.getElementById('f'), done=document.getElementById('done'), err=document.getElementById('err');
+  function oups(m,id){err.textContent=m;err.hidden=false;if(id)document.getElementById(id).focus();}
   f.addEventListener('submit',function(e){
     e.preventDefault();
-    var email=v('email');
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){err.hidden=false;return;}
+    var p=pq(), q=qui(), email=v('email'), dp=v('dprenom'), de=v('demail');
+    if(q==='dest'){
+      if(!dp)return oups("Il nous faut le prénom de la personne qui reçoit le livre.",'dprenom');
+      if(!RE.test(de))return oups("Il nous faut une adresse e-mail valide pour la personne qui reçoit le livre.",'demail');
+    }
+    if(!RE.test(email))return oups("Il nous faut votre adresse e-mail.",'email');
+    if(q==='dest'&&de.toLowerCase()===email.toLowerCase())return oups("Les deux adresses sont identiques : si c'est pour vous, choisissez « Pour moi ».",'demail');
     err.hidden=true;
+    var data={v:1,p:p,q:q};if(q==='dest'){data.n=dp.slice(0,40);data.e=de;}
+    var ref=b64url(JSON.stringify(data)); if(ref.length>200){delete data.n;ref=b64url(JSON.stringify(data));}
     var link=dos.checked?STRIPE.livre_dossier:STRIPE.livre;
     if(link){
-      var u=link+(link.indexOf('?')<0?'?':'&')+'prefilled_email='+encodeURIComponent(email)+'&client_reference_id='+encodeURIComponent(pq().value);
-      window.location.href=u; return;
+      window.location.href=link+(link.indexOf('?')<0?'?':'&')+'prefilled_email='+encodeURIComponent(email)+'&client_reference_id='+ref; return;
     }
     var recap=document.getElementById('recap'); recap.textContent='';
-    [['Le livre est',pq().parentNode.textContent],['Total',total()+' €'],['Contact',email]].forEach(function(r){var dt=document.createElement('dt');dt.textContent=r[0];var dd=document.createElement('dd');dd.textContent=r[1];recap.appendChild(dt);recap.appendChild(dd);});
+    var rows=[['Le livre est',lab('pourqui',p)]];
+    if(q==='dest')rows.push(['Qui raconte',dp+' ('+de+'), vous en copie']);else if(p==='offrir')rows.push(['Qui raconte','Vous, en secret']);
+    rows.push(['Total',total()+' €'],['Contact',email]);
+    rows.forEach(function(r){var dt=document.createElement('dt');dt.textContent=r[0];var dd=document.createElement('dd');dd.textContent=r[1];recap.appendChild(dt);recap.appendChild(dd);});
     f.hidden=true; done.hidden=false;
   });
   document.getElementById('again').addEventListener('click',function(){done.hidden=true;f.hidden=false;});
