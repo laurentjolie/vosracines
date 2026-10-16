@@ -36,6 +36,7 @@ summary small{font-family:var(--f-ui);font-size:13px;color:var(--soft);margin-le
 .saved{font-family:var(--f-ui);font-size:13px;color:var(--ok);min-height:1em}
 .done{margin-top:40px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:24px;display:grid;gap:12px}
 pre{white-space:pre-wrap;font:14px/1.45 ui-monospace,Menlo,monospace;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:12px;max-height:320px;overflow:auto}
+.dest{margin:28px 0;padding:18px 20px;border:1px solid var(--line,rgba(42,35,29,.16));border-left:4px solid #C9A35C;border-radius:4px}.dest p{margin:6px 0}.lien{background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit}.dest[hidden],#f[hidden]{display:none}
 </style></head><body><div class="w">
 <header><a href="index.html">← <i>Vos Racines</i></a></header>
 <main>
@@ -43,6 +44,7 @@ pre{white-space:pre-wrap;font:14px/1.45 ui-monospace,Menlo,monospace;background:
 <h1>Ce que vous savez de la famille</h1>
 <p class="lead">Remplissez ce que vous savez, laissez vide le reste : une date approximative (« vers 1930 ») ou un simple village nous suffit pour retrouver le premier acte. Rien n'est obligatoire. Vos réponses sont gardées sur cet appareil jusqu'à l'envoi, vous pouvez revenir plus tard.</p>
 
+<div class="dest" id="destmsg" hidden><p><strong>Merci, votre commande est enregistrée.</strong></p><p id="destp"></p><p><button type="button" class="lien" id="moimeme">Je préfère remplir moi-même ce que je sais</button></p></div>
 <form id="f" novalidate>
 <section class="gen" aria-labelledby="g0"><header><h2 id="g0">La personne du livre</h2><p>celle à qui le livre est destiné</p></header><div class="cards" data-gen="0"></div></section>
 <section class="gen" aria-labelledby="g1"><header><h2 id="g1">Ses parents</h2></header><div class="cards" data-gen="1"></div></section>
@@ -83,7 +85,14 @@ var KEY='vr-infos-v1',form=document.getElementById('f'),saved=document.getElemen
 function data(){var d={};form.querySelectorAll('input,textarea').forEach(function(i){if(i.value.trim())d[i.id]=i.value.trim();});return d;}
 function store(){try{localStorage.setItem(KEY,JSON.stringify(data()));saved.textContent='Brouillon gardé sur cet appareil.';}catch(e){}}
 try{var s=JSON.parse(localStorage.getItem(KEY)||'{}');Object.keys(s).forEach(function(k){var i=document.getElementById(k);if(i)i.value=s[k];});if(Object.keys(s).some(function(k){return /^(p|m)(p|m)(p|m)_/.test(k);}))document.getElementById('g3w').open=true;}catch(e){}
-var q=new URLSearchParams(location.search);if(q.get('ref'))document.getElementById('ref').value=q.get('ref');if(q.get('email'))document.getElementById('email').value=q.get('email');
+var q=new URLSearchParams(location.search);
+(function(){var c=null;try{c=JSON.parse(localStorage.getItem('vr_commande')||'null');}catch(_){}
+ if(!c||c.q!=='dest'||!c.e||Date.now()-c.t>3*3600*1000||!q.get('ref'))return;
+ var f=document.getElementById('f'),m=document.getElementById('destmsg');
+ document.getElementById('destp').textContent='Nous écrivons dès aujourd\'hui à '+(c.n||'la personne qui reçoit le livre')+' ('+c.e+') depuis archiviste@vosracines.fr pour construire son livre avec elle. Vous serez en copie de nos échanges. Vous n\'avez rien d\'autre à faire.';
+ m.hidden=false;f.hidden=true;
+ document.getElementById('moimeme').addEventListener('click',function(){m.hidden=true;f.hidden=false;});})();
+if(q.get('ref'))document.getElementById('ref').value=q.get('ref');if(q.get('email'))document.getElementById('email').value=q.get('email');
 var t;form.addEventListener('input',function(){clearTimeout(t);t=setTimeout(store,600);});
 function recap(d){var out=[];ROLES.forEach(function(gen){gen.forEach(function(r){var parts=F.map(function(f){return d[r[0]+'_'+f[0]]?f[1]+' : '+d[r[0]+'_'+f[0]]:null;}).filter(Boolean);if(parts.length)out.push(r[1]+'\n  '+parts.join('\n  '));});});
  if(d.notes)out.push('Notes\n  '+d.notes);if(d.email)out.push('E-mail : '+d.email);if(d.ref)out.push('Commande : '+d.ref);return out.join('\n\n');}

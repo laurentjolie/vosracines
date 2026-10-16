@@ -467,6 +467,7 @@ var STRIPE = { livre: 'https://buy.stripe.com/test_dRm4gA9dY7wz12n9Dw9R600', liv
     var data={v:1,p:p,q:q};if(q==='dest'){data.n=dp.slice(0,40);data.e=de;}
     var ref=b64url(JSON.stringify(data)); if(ref.length>200){delete data.n;ref=b64url(JSON.stringify(data));}
     var link=dos.checked?STRIPE.livre_dossier:STRIPE.livre;
+    try{localStorage.setItem('vr_commande',JSON.stringify({t:Date.now(),p:p,q:q,n:data.n||'',e:data.e||''}));}catch(_){}
     if(link){
       window.location.href=link+(link.indexOf('?')<0?'?':'&')+'prefilled_email='+encodeURIComponent(email)+'&client_reference_id='+ref; return;
     }
