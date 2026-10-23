@@ -12,7 +12,7 @@ a{color:inherit} h1{font-weight:500;font-size:40px;line-height:1.15;margin:8px 0
 p,li{color:var(--ink)} .soft{color:var(--soft);font-size:15px}
 header a{text-decoration:none;font-size:22px}
 </style></head><body><div class="w"><header><a href="index.html">← Vos Racines</a></header><p class="rub">Commande enregistrée</p><h1>Merci.</h1>
-<p id="m1">Notre archiviste vous écrit dans quelques minutes, depuis <b>archiviste@vosracines.fr</b>. Tout se passe ensuite par mail : il vous demande ce que vous savez de la famille, une branche après l'autre, et nous prenons le relais dans les archives dès que nous avons un point de départ dans chacune.</p>
+<p id="m1">Notre archiviste vous écrit très vite, depuis <b>archiviste@vosracines.fr</b>. Tout se passe ensuite par mail : il vous demande ce que vous savez de la famille, une branche après l'autre, et nous prenons le relais dans les archives dès que nous avons un point de départ dans chacune.</p>
 <p class="soft">Pensez à regarder dans vos indésirables si rien n'arrive, et ajoutez archiviste@vosracines.fr à vos contacts.</p>
 <p class="soft" style="margin-top:32px">Une question ? Répondez simplement au mail de l'archiviste, ou écrivez à contact@vosracines.fr.</p>
 </div>
@@ -20,7 +20,7 @@ header a{text-decoration:none;font-size:22px}
 (function(){var c=null;try{c=JSON.parse(localStorage.getItem('vr_commande')||'null');}catch(_){}
  if(!c||Date.now()-c.t>6*3600*1000)return;
  var m=document.getElementById('m1');
- if(c.p==='carte'&&c.e){m.textContent='Notre archiviste écrit dans quelques minutes à '+(c.n||'la personne')+' ('+c.e+'), sans lui dévoiler la nature du cadeau, pour lui poser quelques questions sur sa famille. Vous serez tenu au courant par mail.';}
- else if(c.q==='dest'&&c.e){m.textContent='Notre archiviste écrit dans quelques minutes à '+(c.n||'la personne qui reçoit le livre')+' ('+c.e+') pour construire son livre avec elle, par mail. Vous serez en copie de ses messages ; vous n\'avez rien d\'autre à faire.';}
+ if(c.p==='carte'&&c.e){m.textContent='Notre archiviste écrit très vite à '+(c.n||'la personne')+' ('+c.e+'), sans lui dévoiler la nature du cadeau, pour lui poser quelques questions sur sa famille. Vous serez tenu au courant par mail.';}
+ else if(c.q==='dest'&&c.e){m.textContent='Notre archiviste écrit très vite à '+(c.n||'la personne qui reçoit le livre')+' ('+c.e+') pour construire son livre avec elle, par mail. Vous serez en copie de ses messages ; vous n\'avez rien d\'autre à faire.';}
 })();
 </script></body></html>
