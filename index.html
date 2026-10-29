@@ -1,5 +1,5 @@
-<!doctype html><html><head><meta charset=utf8><meta name="robots" content="noindex"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Vos Racines</title>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<title>Vos Racines, le livre de votre famille</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Figtree:wght@400;500;600&display=swap">
@@ -14,18 +14,6 @@
   --f-serif:"EB Garamond", "Iowan Old Style", Georgia, serif;
   --f-ui:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#1E1915; --paper-2:#262019; --card:#2C251E;
-  --ink:#EFE6D6; --ink-soft:#B9AB97; --line:rgba(239,230,214,.16);
-  --night:#14110E; --night-2:#2A231D; --on-night:#F1E9DA; --on-night-soft:#B9AB97;
-  --gold:#D8B46E; --rubric:#D98A72; --red:#D98A72; --green:#8DB894; --blue:#8FAAD3;
-  --seg-print:#8DB894; --seg-tax:#7A7064; --seg-pay:#4D453C; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --paper:#1E1915; --paper-2:#262019; --card:#2C251E;
-  --ink:#EFE6D6; --ink-soft:#B9AB97; --line:rgba(239,230,214,.16);
-  --night:#14110E; --night-2:#2A231D; --on-night:#F1E9DA; --on-night-soft:#B9AB97;
-  --gold:#D8B46E; --rubric:#D98A72; --red:#D98A72; --green:#8DB894; --blue:#8FAAD3;
-  --seg-print:#8DB894; --seg-tax:#7A7064; --seg-pay:#4D453C; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-serif);font-size:19px;line-height:1.55;margin:0}
@@ -213,14 +201,78 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
 
 
 
+
+<style>
+/* Passe automne 29/10/2026 (audit UX Fable) : bandeaux sable au lieu du brun nuit, un seul bandeau écorce au pied,
+   rouille pour l'action, miel pour les filets, contrastes AA minimum, textes de 16 px au moins. */
+:root{
+  --paper:#FBF6EC; --paper-2:#F4EAD8; --card:#FFFCF5;
+  --ink:#2E2117; --ink-soft:#5B4A3A; --line:#D9C8AC;
+  --night:#F1E1C4; --night-2:#FFFCF5; --on-night:#2E2117; --on-night-soft:#5B4A3A;
+  --gold:#A8441E; --honey:#E3A93F; --rubric:#A8441E; --red:#A8441E; --green:#3E6B36; --blue:#4A6E8C;
+  --seg-print:#3E6B36; --seg-tax:#8C7B68; --seg-pay:#D9C8AC;
+  color-scheme:light;
+}
+body{background:var(--paper)}
+.rub{font-size:15px;letter-spacing:.14em}
+.btn{background:#A8441E;border-color:#A8441E;color:#FFF8EC;font-size:17px;padding:15px 24px}
+.btn:hover{filter:none;background:#923a19;border-color:#923a19}
+.btn.ghost{background:transparent;color:var(--ink);border-color:#8C7B68}
+.btn.ghost:hover{background:var(--card);border-color:#A8441E;color:#A8441E}
+.btn:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,.tab:focus-visible,a:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.hero .proof span::before{color:var(--honey);font-size:12px}
+.dos img{box-shadow:0 18px 40px -22px rgba(90,58,34,.45),0 0 0 1px rgba(90,58,34,.12)}
+.dos figcaption{font-style:normal}
+.cmp.us,.offer.main,.chez{border-color:#A8441E}
+.eg,.gift{border-top-color:var(--honey)}
+.steps li:last-child::before{background:var(--honey);border-color:var(--honey)}
+.nav-haut{display:flex;align-items:center;gap:18px}
+.nav-haut .espace{font:600 17px var(--f-ui);color:var(--ink);text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--honey)}
+.logo small{color:var(--ink-soft)}
+/* formulaire de commande : carte claire, champs bien bordés */
+form{background:var(--card);border:1px solid var(--line);box-shadow:0 12px 30px -24px rgba(90,58,34,.5)}
+label{font-size:16px;color:var(--ink-soft)}
+input,select{background:#fff;color:var(--ink);border:1.5px solid #8C7B68;font-size:17px;min-height:48px}
+fieldset{border-color:var(--line)}
+legend,.pq legend{color:var(--ink);font:600 15px var(--f-ui);letter-spacing:.06em}
+.pq span{color:var(--ink);border:1.5px solid #8C7B68;background:#fff;font-size:16px}
+.gp .who{color:var(--ink)}
+.note,.chk{font-size:16px;color:var(--ink-soft)}
+.done{background:var(--card)}
+.done h3{color:#A8441E}
+/* pied de page : seul moment profond, couleur écorce */
+footer.night{background:#5A3A22;color:#E6D2B4;font-size:16px}
+footer.night .brand,footer.night a{color:#FBF3E3}
+footer.night .rub{color:var(--honey)}
+.small,.cite,.panel .pg{font-size:16px}
+@media (max-width:560px){.logo small{display:none}.logo b{font-size:24px}.nav-haut{gap:10px}.nav-haut .espace{font-size:15px;white-space:nowrap}.nav-haut .btn{padding:10px 16px;font-size:16px}}
+</style>
+<style>
+/* Audit retenu 29/10/2026 */
+.prix-clair{margin-top:14px;font:16px var(--f-ui);color:var(--ink-soft);max-width:44ch}
+.steps .n{font:600 22px var(--f-ui);letter-spacing:0;color:var(--rubric)}
+.qui{background:var(--paper)}
+.panel img{cursor:zoom-in}
+dialog.loupe{border:0;padding:0;background:transparent;max-width:96vw;max-height:94vh}
+dialog.loupe::backdrop{background:rgba(46,33,23,.82)}
+dialog.loupe img{display:block;max-width:96vw;max-height:86vh;width:auto;height:auto;background:#fff}
+dialog.loupe button{display:block;margin:10px auto 0;min-height:48px;padding:0 22px;border-radius:999px;border:0;background:#FBF6EC;color:#2E2117;font:600 17px var(--f-ui)}
+.cta-mobile{display:none}
+@media (max-width:720px){.cta-mobile{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:#F1E1C4;border-top:1px solid #D9C8AC;transform:translateY(110%);transition:transform .25s}
+  .cta-mobile.voir{transform:none}.cta-mobile .btn{width:100%;justify-content:center}}
+</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Ccircle cx='15' cy='15' r='15' fill='%23F1E1C4'/%3E%3Cpath d='M15 5v9M15 14c-4 3-7 4-9 7M15 14c4 3 7 4 9 7M15 14c-1 5-3 8-5 11M15 14c1 5 3 8 5 11' fill='none' stroke='%23A8441E' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta property="og:title" content="Vos Racines, le livre de votre famille">
+<meta property="og:description" content="Un livre qui raconte sa famille : les ancêtres retrouvés dans les registres, leurs actes, leurs villages, leurs métiers.">
+</head><body>
 <div class="night">
   <div class="wrap">
     <header class="top">
       <a class="logo" href="#top" aria-label="Vos Racines, accueil">
-        <svg class="mk" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 4v10M15 14c-4 3-8 4-11 8M15 14c4 3 8 4 11 8M15 14c-1 5-3 9-6 12M15 14c1 5 3 9 6 12" fill="none" stroke="#C9A35C" stroke-width="1.5" stroke-linecap="round"/><path d="M15 2l2.2 2.2L15 6.4l-2.2-2.2z" fill="#C9A35C"/></svg>
+        <svg class="mk" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 4v10M15 14c-4 3-8 4-11 8M15 14c4 3 8 4 11 8M15 14c-1 5-3 9-6 12M15 14c1 5 3 9 6 12" fill="none" stroke="#A8441E" stroke-width="1.5" stroke-linecap="round"/><path d="M15 2l2.2 2.2L15 6.4l-2.2-2.2z" fill="#E3A93F"/></svg>
         <span><b>Vos Racines</b><small>Le livre de votre famille</small></span>
       </a>
-      <a class="btn ghost" href="#offrir">Offrir</a>
+      <nav class="nav-haut"><a class="espace" href="espace/">Votre espace</a><a class="btn ghost" href="#offrir">Offrir</a></nav>
     </header>
 
     <div class="hero" id="top">
@@ -231,6 +283,9 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
         <div class="ctas">
           <a class="btn" href="#offrir">Offrir un livre, 49 €</a>
           <a class="btn ghost" href="#livre">Feuilleter un exemple</a>
+        </div>
+        <p class="prix-clair">49 € le livre numérique, relu avec vous. Ensuite, si vous le voulez, 29 € par exemplaire relié.</p>
+        <div hidden>
         </div>
         <div class="proof"><span>Trois relectures avec vous</span><span>Remboursé si les archives sont trop pauvres</span><span>Rien sur les vivants</span></div>
       </div>
@@ -303,7 +358,7 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
         <div class="chez">
           <span class="lab">Chez <i>Vos Racines</i></span>
           <p class="big">49 €</p>
-          <p>Le livre de la famille, écrit à partir des actes et relu avec vous.</p>
+          <p>Le livre de la famille, écrit à partir des actes et relu avec vous. Puis 29 € par exemplaire relié, si vous le voulez.</p>
           <a class="btn" href="#offrir" style="margin-top:18px">Offrir un livre</a>
         </div>
       </div>
@@ -315,11 +370,11 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
       <p class="rub">Comment ça se passe</p>
       <h2>Vous offrez, on s'occupe du reste.</h2>
       <ol class="steps">
-        <li><span class="n">I</span><b>Vous commandez</b><span>Pour vous, ou pour l'offrir. Si c'est une surprise, on fait tout avec vous.</span></li>
-        <li><span class="n">II</span><b>Un premier échange, par mail</b><span>Notre archiviste vous écrit : les noms, les lieux, les papiers et les photos de famille que vous avez. On amorce chaque branche.</span></li>
-        <li><span class="n">III</span><b>La recherche</b><span>Acte par acte, dans les registres paroissiaux et d'état civil.</span></li>
-        <li><span class="n">IV</span><b>Vous relisez</b><span>Le livre numérique d'abord, en trois tours de relecture avec vous avant l'impression.</span></li>
-        <li><span class="n">V</span><b>Le livre arrive</b><span>Dès qu'il est prêt : quelques jours à quelques semaines selon les archives. Les exemplaires reliés suivent une dizaine de jours plus tard.</span></li>
+        <li><span class="n">1</span><b>Vous commandez</b><span>Pour vous, ou pour l'offrir. Si c'est une surprise, on fait tout avec vous.</span></li>
+        <li><span class="n">2</span><b>Un premier échange, par mail</b><span>Notre archiviste vous écrit : les noms, les lieux, les papiers et les photos de famille que vous avez. On amorce chaque branche.</span></li>
+        <li><span class="n">3</span><b>La recherche</b><span>Acte par acte, dans les registres paroissiaux et d'état civil.</span></li>
+        <li><span class="n">4</span><b>Vous relisez</b><span>Le livre numérique d'abord, en trois tours de relecture avec vous avant l'impression.</span></li>
+        <li><span class="n">5</span><b>Le livre arrive</b><span>Dès qu'il est prêt : quelques jours à quelques semaines selon les archives. Les exemplaires reliés suivent une dizaine de jours plus tard.</span></li>
       </ol>
       <div class="five" style="margin-bottom:24px">
         <b>Le mur des premiers ancêtres</b>
@@ -330,6 +385,14 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
         <div class="eg"><b>Remboursé si les archives sont trop pauvres</b><span>Si, après le premier échange, les registres de votre famille ne permettent pas d'écrire un vrai livre, nous vous remboursons intégralement.</span></div>
         <div class="eg"><b>Rien sur les vivants</b><span>Le livre ne dit rien d'une personne vivante, à part ce que vous nous dites vous-même.</span></div>
       </div>
+    </div>
+  </section>
+
+  <section class="qui">
+    <div class="wrap">
+      <p class="rub">Qui écrit votre livre</p>
+      <h2>Une petite maison indépendante.</h2>
+      <p class="lede" style="margin-top:16px">Vos Racines a été créée par Laurent Jolie, à Issy-les-Moulineaux. Une IA lit les registres et prépare le texte ; chaque livre est ensuite relu par Laurent, puis par vous, avant d'être imprimé. Une question, une hésitation : écrivez à <a href="mailto:contact@vosracines.fr">contact@vosracines.fr</a>, c'est lui qui vous répond.</p>
     </div>
   </section>
 
@@ -384,8 +447,9 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
           <label for="email">Votre e-mail<input id="email" name="email" type="email" autocomplete="email" required></label>
           <p class="note" id="pqnote">C'est votre propre famille : rien d'autre à préciser : notre archiviste vous écrit par mail juste après.</p>
           <p class="note" id="total">Total : 49 €</p><p class="note">Un code promo ? Vous pourrez le saisir sur la page de paiement.</p>
-          <p class="note" id="err" hidden></p>
+          <p class="note" id="err" role="alert" aria-live="assertive" hidden></p>
           <button class="btn" type="submit">Passer au paiement</button>
+          <p class="note">Paiement par carte sur une page sécurisée Stripe. Une question avant de commander ? <a href="mailto:contact@vosracines.fr">contact@vosracines.fr</a></p>
         </form>
         <div class="done" id="done" hidden>
           <h3>Merci, c'est noté.</h3>
@@ -415,14 +479,30 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
   </section>
 </main>
 
+<div class="cta-mobile" aria-hidden="true"><a class="btn" href="#offrir" tabindex="-1">Offrir un livre, 49 €</a></div>
+<dialog class="loupe" aria-label="Page agrandie"><img alt=""><button type="button">Fermer</button></dialog>
+<script>
+(function(){
+  var d=document.querySelector('dialog.loupe'); if(!d||!d.showModal) return;
+  var im=d.querySelector('img');
+  document.querySelectorAll('.panel img').forEach(function(i){ i.addEventListener('click',function(){ im.src=i.src; im.alt=i.alt; d.showModal(); }); });
+  d.querySelector('button').addEventListener('click',function(){ d.close(); });
+  d.addEventListener('click',function(e){ if(e.target===d) d.close(); });
+  var c=document.querySelector('.cta-mobile'), h=document.querySelector('.hero'), o=document.getElementById('commande');
+  if(!('IntersectionObserver' in window)||!c||!h) return;
+  var apres=false, cmd=false, maj=function(){ c.classList.toggle('voir', apres && !cmd); };
+  new IntersectionObserver(function(e){ apres=!e[0].isIntersecting && e[0].boundingClientRect.top<0; maj(); }).observe(h);
+  if(o) new IntersectionObserver(function(e){ cmd=e[0].isIntersecting; maj(); }).observe(o);
+})();
+</script>
 <footer class="night">
-  <div class="wrap"><span class="brand">Vos Racines</span><span>vosracines.fr · <a href="mentions-legales.html">Mentions légales</a> · <a href="cgv.html">Conditions de vente</a> · <a href="confidentialite.html">Confidentialité</a></span></div>
+  <div class="wrap"><span class="brand">Vos Racines</span><span><a href="mailto:contact@vosracines.fr">contact@vosracines.fr</a> · <a href="mentions-legales.html">Mentions légales</a> · <a href="cgv.html">Conditions de vente</a> · <a href="confidentialite.html">Confidentialité</a></span></div>
 </footer>
 
 <script>
 /* Paiement : liens de paiement Stripe (Payment Links), codes promo activés dans Stripe.
    Remplacer les deux URL ci-dessous par celles créées dans le tableau de bord Stripe. */
-var STRIPE = { livre: 'https://buy.stripe.com/28EcN686f7xI7NCarbgYU00', livre_dossier: '' }; // TEST : remplacer par les liens de production apres activation
+var STRIPE = { livre: 'https://buy.stripe.com/28EcN686f7xI7NCarbgYU00', livre_dossier: '' }; // lien Stripe de production (verifie le 29/10/2026)
 (function(){
   var tabs=[].slice.call(document.querySelectorAll('.tab'));
   function show(t){tabs.forEach(function(x){var on=x===t;x.setAttribute('aria-selected',on?'true':'false');x.tabIndex=on?0:-1;document.getElementById(x.getAttribute('aria-controls')).hidden=!on;});}
