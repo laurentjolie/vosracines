@@ -20,8 +20,8 @@ async function sourceFirebase() {
   await fb.setPersistence(auth, fb.browserLocalPersistence);
   const morceaux = async (id, quoi) => {
     const qs = await fb.getDocs(fb.collection(db, 'arbres', id, quoi));
-    const out = {personnes: {}, familles: []};
-    qs.docs.sort((a, b) => +a.id - +b.id).forEach(d => { let x = d.data(); if (typeof x.d === 'string') x = JSON.parse(x.d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); });
+    const out = {personnes: {}, familles: [], actes: []};
+    qs.docs.sort((a, b) => +a.id - +b.id).forEach(d => { let x = d.data(); if (typeof x.d === 'string') x = JSON.parse(x.d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); out.actes.push(...(x.actes || [])); });
     return out;
   };
   return {
@@ -44,6 +44,7 @@ async function sourceFirebase() {
       for (const id of avant.filter(a => !arbres.includes(a))) await fb.updateDoc(fb.doc(db, 'arbres', id), {lecteurs: fb.arrayRemove(email)});
     },
     envoyerLienA: email => fb.addDoc(fb.collection(db, 'demandes_acces'), {email, cree: fb.serverTimestamp(), par: 'admin'}),
+    image: async (id, nom) => { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'images', nom)); return d.exists() ? d.data().d : null; },
     sortir: () => fb.signOut(auth),
   };
 }
@@ -63,6 +64,7 @@ async function sourceDev() {   // données locales pour essayer l'interface sans
     comptes: async () => Object.entries(comptes).map(([email, c]) => ({email, ...c})),
     majCompte: async (email, arbres) => { comptes[email] = {arbres}; },
     envoyerLienA: async () => {},
+    image: async (id, nom) => `dev/arbres/images/${id}/${nom}`,
     sortir: async () => { ecrire('vr-dev-sortie', '1'); location.reload(); },
   };
 }
@@ -202,7 +204,7 @@ async function ouvrirArbre(id, version) {
   }
   $app.innerHTML = barre(d.titre, sel) + '<div id="arbre"></div>';
   brancherBarre();
-  creerArbre(document.getElementById('arbre'), d, {admin: U.admin && version === 'admin'});
+  creerArbre(document.getElementById('arbre'), d, {admin: U.admin && version === 'admin', image: nom => S.image(id, nom)});
 }
 
 // ---------------------------------------------------------------- administration

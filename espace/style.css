@@ -193,3 +193,24 @@ table.liste td.num{text-align:right;font-variant-numeric:tabular-nums}
 .page.large{max-width:1320px}
 table.liste td .rangee{flex-wrap:nowrap}
 table.liste td:nth-child(4){white-space:nowrap}
+
+/* 29/10 : traits de lien et actes */
+.leg-titre{font-weight:600;margin:10px 0 2px}
+.legende li svg{flex:none}
+.lien-niv{display:flex;align-items:center;gap:10px;margin:4px 0 8px;font-size:16px}
+.fiche .liens.actes button{display:block}
+.fiche .liens.actes small,.acte-carte .liens.actes small{display:block;color:var(--ink-soft);font-size:14px;margin-top:2px}
+.acte-vue{position:fixed;inset:0;z-index:40;background:rgba(46,33,23,.55);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
+.acte-carte{background:var(--paper);border-radius:14px;max-width:820px;width:100%;padding:20px 22px 26px;box-shadow:var(--shadow)}
+.acte-tete{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.acte-tete h2{font-family:var(--f-display);font-weight:600;font-size:26px;margin:0}
+.acte-tete .fermer{min-height:44px;border:0;background:var(--bg-2);border-radius:22px;font-weight:600;padding:0 16px;flex:none}
+.acte-ref{color:var(--ink-soft);font-size:15px;margin:6px 0 14px}
+.acte-img img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff}
+.acte-img .petit{display:block;margin-top:6px}
+.acte-carte h3{font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin:18px 0 6px}
+.acte-texte{font-family:var(--f-serif);font-size:19px;line-height:1.5;background:var(--bg);border-radius:10px;padding:12px 16px}
+.acte-note{color:var(--ink-soft);font-size:16px;margin-top:12px}
+.acte-carte .liens{display:flex;flex-direction:column;gap:6px}
+.acte-carte .liens button{text-align:left;border:0;background:var(--bg-2);border-radius:8px;padding:10px 12px;min-height:44px}
+@media (max-width:719px){.ensemble{display:flex;top:124px;right:12px;left:auto}.ensemble [data-a=tout],.ensemble [data-a=imprimer]{display:none}}

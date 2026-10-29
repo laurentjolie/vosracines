@@ -6,6 +6,11 @@ const PROF = () => (innerWidth < 720 ? 2 : 3);
 const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const PREUVE = {acte: ['●', 'p-acte', 'Acte lu', 'nous avons lu l’acte'], piste: ['◐', 'p-piste', 'Piste', 'indiqué par d’autres chercheurs, pas encore vérifié'],
   hypothese: ['○', 'p-hyp', 'Hypothèse', 'probable, à confirmer'], famille: ['◆', 'p-fam', 'Donné par la famille', 'information transmise par la famille']};
+// 29/10 : le trait dit la solidite du lien de parente (du parent vers l'enfant), pas seulement la personne
+const LIEN = {acte: {w: 3, d: '', lib: 'Lien prouvé par un acte'}, piste: {w: 2.2, d: '9 6', lib: 'Lien probable (piste)'},
+  hypothese: {w: 2.2, d: '1.5 6', lib: 'Lien supposé (hypothèse)'}, famille: {w: 2.2, d: '12 4 2 4', lib: 'Lien donné par la famille'}, inconnu: {w: 2, d: '4 4', lib: 'Lien non vérifié'}};
+const lienDe = x => { const n = x && x.nl; if (!n) return LIEN.inconnu; if (n.startsWith('hyp')) return LIEN.hypothese; return LIEN[n] || LIEN.piste; };
+const LIBNL = {acte: 'prouvé par un acte', piste: 'probable : une piste, pas encore d’acte lu', hypothese: 'supposé : une hypothèse à confirmer', famille: 'donné par la famille'};
 const preuve = n => PREUVE[n] || (n && n.startsWith('hyp') ? PREUVE.hypothese : n ? PREUVE.piste : null);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sansAccent = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -65,15 +70,18 @@ export function creerArbre(racineEl, data, opt = {}) {
     <ul class="suggestions" id="sugg" role="listbox" hidden></ul>
   </div>
   <div class="fil" hidden></div>
-  <div class="flottant ensemble"><button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
+  <div class="flottant ensemble">${(data.actes || []).length ? `<button data-a="actes">Les actes du livre (${data.actes.length})</button>` : ''}<button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
+  <div class="acte-vue" hidden role="dialog" aria-modal="true" aria-label="Acte"></div>
   <div class="flottant zoom">
     <button data-a="plus" aria-label="Agrandir">+</button><button data-a="moins" aria-label="Réduire">−</button>
     <button data-a="moi" class="moi" aria-label="Revenir à ${esc(egoNom)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg><span>Revenir à ${esc(egoNom)}</span></button>
   </div>
-  <div class="flottant legende"><button aria-expanded="true">Légende</button><div class="corps">
+  <div class="flottant legende"><button aria-expanded="true">Légende : couleurs, preuves et traits</button><div class="corps">
     <ul>${['l1','l2','l3','l4'].map((l, i) => `<li><span class="sw" style="background:var(--${l})"></span>${esc(nomLignee(i))}</li>`).join('')}</ul>
     <ul>${['acte','piste','hypothese','famille'].map(n => `<li><span class="${PREUVE[n][1]}" style="width:16px;text-align:center">${PREUVE[n][0]}</span><span><b>${PREUVE[n][2]}</b> : ${PREUVE[n][3]}</span></li>`).join('')}
-    <li><span style="width:16px;text-align:center">🔒</span><span>Personne vivante : seul le prénom est affiché</span></li></ul></div></div>
+    <li><span style="width:16px;text-align:center">🔒</span><span>Personne vivante : seul le prénom est affiché</span></li></ul>
+    <p class="leg-titre">Les traits entre parents et enfants</p>
+    <ul>${['acte','piste','hypothese','famille'].map(n => `<li><svg width="44" height="10" aria-hidden="true"><path d="M2 5 H42" stroke="var(--ink-soft)" stroke-width="${LIEN[n].w}" stroke-linecap="round" ${LIEN[n].d ? `stroke-dasharray="${LIEN[n].d}"` : ''}/></svg><span>${LIEN[n].lib}</span></li>`).join('')}</ul></div></div>
   <aside class="fiche" hidden aria-label="Fiche de la personne"></aside>`;
   const vue = racineEl.querySelector('.vue'), scene = racineEl.querySelector('.scene'), svg = scene.querySelector('svg'),
         cartesEl = scene.querySelector('.cartes'), fiche = racineEl.querySelector('.fiche'), fil = racineEl.querySelector('.fil');
@@ -139,11 +147,12 @@ export function creerArbre(racineEl, data, opt = {}) {
     const L = construire(), {w, h} = L; let html = '', paths = '';
     for (const n of L.noeuds) html += carteHTML(n.id, n.x, n.y);
     for (const n of L.liens) {
-      const mid = n.y - GAP_GEN / 2, cl = colLien(n);
+      const mid = n.y - GAP_GEN / 2, cl = colLien(n), L = lienDe(P[n.id]);
+      const st = `stroke="${cl}" stroke-width="${L.w}" fill="none" stroke-linecap="round" ${L.d ? `stroke-dasharray="${L.d}"` : ''}`;
       const ps = [n.pere, n.mere].filter(Boolean);
-      paths += `<path d="M${n.cx} ${n.y} V${mid}" stroke="${cl}" stroke-width="2" fill="none"/>`;
-      if (ps.length === 2) paths += `<path d="M${ps[0].cx} ${ps[0].y + h} V${mid} H${ps[1].cx} V${ps[1].y + h}" stroke="${cl}" stroke-width="2" fill="none" stroke-linejoin="round"/>`;
-      else paths += `<path d="M${ps[0].cx} ${ps[0].y + h} V${mid} H${n.cx}" stroke="${cl}" stroke-width="2" fill="none"/>`;
+      paths += `<path d="M${n.cx} ${n.y} V${mid}" ${st}><title>${L.lib}</title></path>`;
+      if (ps.length === 2) paths += `<path d="M${ps[0].cx} ${ps[0].y + h} V${mid} H${ps[1].cx} V${ps[1].y + h}" ${st} stroke-linejoin="round"><title>${L.lib}</title></path>`;
+      else paths += `<path d="M${ps[0].cx} ${ps[0].y + h} V${mid} H${n.cx}" ${st}><title>${L.lib}</title></path>`;
       const m = n.f && n.f.mar;
       if (ps.length === 2) html += `<span class="anneau" style="left:${(ps[0].cx + ps[1].cx) / 2}px;top:${mid}px">∞${m && m.d ? ' ' + esc(an(m)) : ''}</span>`;
     }
@@ -151,7 +160,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (L.desc.length) {
       const foc = positions[focus];
       html += `<span class="titre-enfants" style="left:${foc.cx}px;top:${foc.y + h + 20}px">Ses enfants</span>`;
-      for (const d of L.desc) { html += carteHTML(d.id, d.x, d.y, 'desc'); paths += `<path d="M${foc.cx} ${foc.y + h} V${foc.y + h + 14} M${d.x + w / 2} ${d.y} V${d.y - 10} H${foc.cx}" stroke="var(--line-strong)" stroke-width="2" fill="none"/>`; }
+      for (const d of L.desc) { html += carteHTML(d.id, d.x, d.y, 'desc'); const L = lienDe(P[d.id]); paths += `<path d="M${foc.cx} ${foc.y + h} V${foc.y + h + 14} M${d.x + w / 2} ${d.y} V${d.y - 10} H${foc.cx}" stroke="var(--line-strong)" stroke-width="${L.w}" ${L.d ? `stroke-dasharray="${L.d}"` : ''} fill="none"/>`; }
     }
     svg.innerHTML = paths; cartesEl.innerHTML = html;
     majFil();
@@ -220,12 +229,12 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (a === 'moi') { focus = ego; ouverts = {}; dessiner(); premiereVue(); }
   });
   racineEl.querySelector('.ensemble').addEventListener('click', e => {
-    const a = e.target.closest('button')?.dataset.a; if (a === 'tout') toutVoir(); if (a === 'imprimer') print();
+    const a = e.target.closest('button')?.dataset.a; if (a === 'tout') toutVoir(); if (a === 'imprimer') print(); if (a === 'actes') listeActes();
   });
   const leg = racineEl.querySelector('.legende');
   const legBtn = leg.querySelector('button');
   const legVue = (() => { try { return localStorage.getItem('vr-legende'); } catch (e) { return null; } })();
-  if (legVue || innerWidth < 720) { legBtn.setAttribute('aria-expanded', 'false'); leg.querySelector('.corps').hidden = true; }
+  if (true) { legBtn.setAttribute('aria-expanded', 'false'); leg.querySelector('.corps').hidden = true; }
   legBtn.addEventListener('click', () => { const o = legBtn.getAttribute('aria-expanded') === 'true'; legBtn.setAttribute('aria-expanded', String(!o)); leg.querySelector('.corps').hidden = o; try { localStorage.setItem('vr-legende', '1'); } catch (e) {} });
   addEventListener('keydown', e => {
     if (e.target.matches('input')) { if (e.key === 'Escape') e.target.blur(); return; }
@@ -270,8 +279,10 @@ export function creerArbre(racineEl, data, opt = {}) {
       <h2>${esc(nomComplet(p))}</h2>
       <p class="parente">${esc(id === ego ? 'C’est la personne de ce livre.' : parente(p, egoNom) || 'Famille')}${p.fam ? ' · Informations transmises par la famille' : ''}</p>
       ${pv ? `<p><span class="${pv[1]}">${pv[0]}</span> <b>${esc(pv[2])}</b> : ${esc(pv[3])}</p>` : ''}
+      ${pa && (P[pa.h] || P[pa.w]) ? `<p class="lien-niv"><svg width="44" height="10" aria-hidden="true"><path d="M2 5 H42" stroke="var(--ink-soft)" stroke-width="${lienDe(p).w}" stroke-linecap="round" ${lienDe(p).d ? `stroke-dasharray="${lienDe(p).d}"` : ''}/></svg><span>Lien avec ses parents : <b>${esc(LIBNL[p.nl] || (p.nl && p.nl.startsWith('hyp') ? LIBNL.hypothese : 'non vérifié'))}</b></span></p>` : ''}
       <ul class="evts">${evt(`Né${e}`, p.na)}${!p.na ? evt(`Baptisé${e}`, p.ba) : ''}${unis}${evt(`Décédé${e}`, p.de)}</ul>
       ${p.me && p.me.length ? `<h3>Métier${p.me.length > 1 ? 's' : ''}</h3><p>${p.me.map(m => { const [x, y] = met(m); return esc(x) + (y ? ` (${esc(y)})` : ''); }).join(', ')}</p>` : ''}
+      ${(p.ac || []).length ? `<h3>Ses actes reproduits (${p.ac.length})</h3><div class="liens actes">${p.ac.map(i => data.actes[i]).filter(Boolean).map((a, j) => `<button data-acte="${p.ac[j]}"><b>${esc(a.titre)}</b><small>${esc(a.ref)}</small></button>`).join('')}</div>` : ''}
       ${pa && (P[pa.h] || P[pa.w]) ? `<h3>Ses parents</h3><div class="liens">${[pa.h, pa.w].filter(z => P[z]).map(lien).join('')}</div>` : ''}
       ${ks.length ? `<h3>Ses enfants</h3><div class="liens">${ks.map(lien).join('')}</div>` : ''}
       ${opt.admin && (p.no || (p.src && p.src.length)) ? `<h3>Notes de recherche (admin)</h3><div class="note">${esc(p.no || '')}${p.src && p.src.length ? '\nSources : ' + esc(p.src.join(', ')) : ''}</div>` : ''}
@@ -281,6 +292,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     fiche.querySelector('.poignee').onclick = () => fiche.classList.toggle('pleine');
     fiche.querySelector('[data-recentrer]').onclick = () => { fermerFiche(); recentrer(id); };
     fiche.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => voir(b.dataset.voir));
+    fiche.querySelectorAll('[data-acte]').forEach(b => b.onclick = () => ouvrirActe(+b.dataset.acte));
     fiche.querySelector('.fermer').focus({preventScroll: true});
   }
   function fermerFiche() { fiche.hidden = true; choisi = null; cartesEl.querySelectorAll('.choisie').forEach(c => c.classList.remove('choisie')); }
@@ -291,6 +303,37 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (c) { c.classList.remove('pulse'); void c.offsetWidth; c.classList.add('pulse'); }
     ouvrirFiche(id);
   }
+
+  // ---------- actes ----------
+  const av = racineEl.querySelector('.acte-vue');
+  function fermerActe() { av.hidden = true; av.innerHTML = ''; }
+  async function ouvrirActe(i) {
+    const a = (data.actes || [])[i]; if (!a) return;
+    const qui = (a.personnes || []).filter(z => P[z] && !P[z].cache);
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>${esc(a.titre)}</h2><button class="fermer">Fermer</button></div>
+      <p class="acte-ref">${esc(a.ref)}</p>
+      <div class="acte-img"><span class="petit">Chargement de l’image…</span></div>
+      ${a.texte ? `<h3>Ce que dit l’acte</h3><div class="acte-texte">${a.texte}</div>` : ''}
+      ${a.trad ? `<h3>En français d’aujourd’hui</h3><div class="acte-texte">${a.trad}</div>` : ''}
+      ${a.note ? `<p class="acte-note">${a.note}</p>` : ''}
+      ${qui.length ? `<h3>Dans cet acte</h3><div class="liens">${qui.map(z => `<button data-voir="${esc(z)}">${esc(nomComplet(P[z]))}</button>`).join('')}</div>` : ''}</div>`;
+    av.hidden = false;
+    av.querySelector('.fermer').onclick = fermerActe;
+    av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
+    av.querySelector('.fermer').focus();
+    try {
+      const src = opt.image ? await opt.image(a.img) : null; const box = av.querySelector('.acte-img'); if (!box) return;
+      box.innerHTML = src ? `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${esc(a.titre)}"></a><span class="petit">Touchez l’image pour l’ouvrir en grand.</span>` : '<span class="petit">Image non disponible.</span>';
+    } catch (e) { const box = av.querySelector('.acte-img'); if (box) box.innerHTML = '<span class="petit">Image non disponible.</span>'; }
+  }
+  function listeActes() {
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>Les actes du livre</h2><button class="fermer">Fermer</button></div>
+      <div class="liens actes">${(data.actes || []).map((a, i) => `<button data-acte="${i}"><b>${esc(a.titre)}</b><small>${esc(a.ref)}</small></button>`).join('')}</div></div>`;
+    av.hidden = false; av.querySelector('.fermer').onclick = fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelectorAll('[data-acte]').forEach(b => b.onclick = () => ouvrirActe(+b.dataset.acte));
+  }
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !av.hidden) fermerActe(); });
 
   // ---------- recherche ----------
   const inp = racineEl.querySelector('#cherche'), ul = racineEl.querySelector('#sugg');
