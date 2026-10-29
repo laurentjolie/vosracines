@@ -223,3 +223,16 @@ table.liste td:nth-child(4){white-space:nowrap}
 .sources a{font-size:15px}
 .sources small{display:block;color:var(--ink-soft);font-size:13px}
 .sources p,.sources a{overflow-wrap:anywhere}
+
+/* 29/10 : pepites (halo dore) */
+.carte.pepite{box-shadow:0 0 0 2px #E3A93F,0 0 22px 8px rgba(227,169,63,.55)}
+.carte.pepite:hover{box-shadow:0 0 0 2px #E3A93F,0 0 26px 10px rgba(227,169,63,.7)}
+.carte .etoile{position:absolute;top:-10px;left:-8px;width:22px;height:22px;border-radius:50%;background:#E3A93F;color:#5A3A22;font-size:13px;line-height:22px;text-align:center;box-shadow:0 1px 3px rgba(46,33,23,.3)}
+.pepite-sw{background:#FFFCF5;box-shadow:0 0 0 2px #E3A93F,0 0 8px 3px rgba(227,169,63,.6)}
+.pep-bloc{background:#FBEFD2;border:1px solid #E3A93F;border-radius:10px;padding:4px 14px 10px;margin:12px 0}
+.pep-bloc h3{color:#7A5410}
+.pep-bloc p{font-size:15px;line-height:1.5;margin:6px 0}
+.pep-r span{display:inline-block;background:#FFFCF5;border:1px solid #E3A93F;border-radius:12px;padding:2px 10px;margin:0 6px 6px 0;font-size:14px;font-weight:600}
+.compact .carte .etoile{transform:scale(1.4)}
+@media (max-width:719px){.ensemble{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 24px)}.ensemble button{min-height:40px;font-size:14px;padding:0 10px}}
+.vue.tres-loin .carte .nom{font-size:22px}

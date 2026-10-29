@@ -59,7 +59,7 @@ export function creerArbre(racineEl, data, opt = {}) {
   }
   const ego = P[data.racine] ? data.racine : Object.keys(P)[0];
   const egoNom = (P[ego] && (P[ego].u || P[ego].p) || '').split(' ')[0];
-  let focus = ego, ouverts = {}, choisi = null, k = 1, tx = 0, ty = 0, positions = {};
+  let focus = ego, ouverts = {}, choisi = null, k = 1, tx = 0, ty = 0, positions = {}, tout = false;
 
   racineEl.innerHTML = `
   <div class="vue" tabindex="-1"><div class="scene"><svg></svg><div class="cartes"></div></div></div>
@@ -70,7 +70,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     <ul class="suggestions" id="sugg" role="listbox" hidden></ul>
   </div>
   <div class="fil" hidden></div>
-  <div class="flottant ensemble">${(data.actes || []).length ? `<button data-a="actes">Les actes du livre (${data.actes.length})</button>` : ''}<button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
+  <div class="flottant ensemble"><button data-a="entier">Ouvrir l’arbre en entier</button>${Object.values(P).filter(p => p.pep && !p.cache).length ? `<button data-a="pepites">✦ Les pépites (${Object.values(P).filter(p => p.pep && !p.cache).length})</button>` : ''}${(data.actes || []).length ? `<button data-a="actes">Les actes du livre (${data.actes.length})</button>` : ''}<button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
   <div class="acte-vue" hidden role="dialog" aria-modal="true" aria-label="Acte"></div>
   <div class="flottant zoom">
     <button data-a="plus" aria-label="Agrandir">+</button><button data-a="moins" aria-label="Réduire">−</button>
@@ -80,6 +80,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     <ul>${['l1','l2','l3','l4'].map((l, i) => `<li><span class="sw" style="background:var(--${l})"></span>${esc(nomLignee(i))}</li>`).join('')}</ul>
     <ul>${['acte','piste','hypothese','famille'].map(n => `<li><span class="${PREUVE[n][1]}" style="width:16px;text-align:center">${PREUVE[n][0]}</span><span><b>${PREUVE[n][2]}</b> : ${PREUVE[n][3]}</span></li>`).join('')}
     <li><span style="width:16px;text-align:center">🔒</span><span>Personne vivante : seul le prénom est affiché</span></li></ul>
+    <p class="leg-titre">Les pépites</p><ul><li><span class="sw pepite-sw"></span><span>Halo doré : une personne sur qui on en sait davantage (guerre, décoration, presse, justice, voyage, histoire de famille)</span></li></ul>
     <p class="leg-titre">Les traits entre parents et enfants</p>
     <ul>${['acte','piste','hypothese','famille'].map(n => `<li><svg width="44" height="10" aria-hidden="true"><path d="M2 5 H42" stroke="var(--ink-soft)" stroke-width="${LIEN[n].w}" stroke-linecap="round" ${LIEN[n].d ? `stroke-dasharray="${LIEN[n].d}"` : ''}/></svg><span>${LIEN[n].lib}</span></li>`).join('')}</ul></div></div>
   <aside class="fiche" hidden aria-label="Fiche de la personne"></aside>`;
@@ -97,7 +98,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     const w = W(), h = H(); let curseur = 0; const noeuds = [], liens = [], plusBtns = [];
     function place(id, g, lim) {
       const x = P[id]; const f = parents[id];
-      const montre = f && !x.cache && (g < lim);
+      const montre = f && !x.cache && (tout || g < lim);
       let pere = null, mere = null;
       if (montre) {
         const l2 = Math.max(lim, ouverts[id] || 0);
@@ -137,10 +138,10 @@ export function creerArbre(racineEl, data, opt = {}) {
     const l = lignee(p), pv = preuve(p.niv), est = id === ego;
     const dates = [an(p.na) || an(p.ba), an(p.de)].some(Boolean) ? `${an(p.na) || an(p.ba) || '?'}${p.de ? ' · ' + an(p.de) : (p.v ? '' : ' · ?')}` : '';
     const lieu = lieuCourt((p.na || p.ba || {}).p) || (p.me && p.me[0] ? met(p.me[0])[0] : '');
-    const lab = [nomComplet(p), dates.replace(' · ', ' à '), lieu, pv ? pv[2] : ''].filter(Boolean).join(', ');
-    return `<button class="carte ${est ? 'ego' : l} ${choisi === id ? 'choisie' : ''} ${extra}" data-id="${esc(id)}" style="left:${x}px;top:${y}px" ${est ? `data-ruban="${esc(egoNom)}"` : ''} aria-label="${esc(lab)}">
+    const lab = [nomComplet(p), dates.replace(' · ', ' à '), lieu, pv ? pv[2] : '', p.pep ? 'pépite de l’arbre' : ''].filter(Boolean).join(', ');
+    return `<button class="carte ${est ? 'ego' : l} ${choisi === id ? 'choisie' : ''} ${p.pep ? 'pepite' : ''} ${extra}" data-id="${esc(id)}" style="left:${x}px;top:${y}px" ${est ? `data-ruban="${esc(egoNom)}"` : ''} aria-label="${esc(lab)}">
       <span class="nom" title="${esc(nomComplet(p))}">${esc(nomComplet(p))}</span><span class="dates">${esc(dates)}</span><span class="lieu">${esc(lieu)}</span>
-      ${pv ? `<span class="preuve ${pv[1]}" aria-hidden="true">${pv[0]}</span>` : ''}</button>`;
+      ${pv ? `<span class="preuve ${pv[1]}" aria-hidden="true">${pv[0]}</span>` : ''}${p.pep ? '<span class="etoile" aria-hidden="true">✦</span>' : ''}</button>`;
   }
 
   function dessiner() {
@@ -186,13 +187,13 @@ export function creerArbre(racineEl, data, opt = {}) {
     const ns = Object.values(positions); if (!ns.length) return;
     const x0 = Math.min(...ns.map(n => n.x)), x1 = Math.max(...ns.map(n => n.x + W())), y0 = Math.min(...ns.map(n => n.y)), y1 = Math.max(...ns.map(n => n.y + H()));
     const r = vue.getBoundingClientRect();
-    k = Math.max(0.25, Math.min(1.2, Math.min((r.width - 40) / (x1 - x0), (r.height - 140) / (y1 - y0))));
+    k = Math.max(tout ? 0.05 : 0.25, Math.min(1.2, Math.min((r.width - 40) / (x1 - x0), (r.height - 140) / (y1 - y0))));
     tx = (r.width - (x1 - x0) * k) / 2 - x0 * k; ty = 110 + (r.height - 140 - (y1 - y0) * k) / 2 - y0 * k; appliquer();
   }
   function premiereVue() { toutVoir(); const mini = innerWidth < 720 ? 0.62 : 0.45; if (k < mini) centrerSur(ego, mini); }
   function zoomer(f, cx, cy) {
     const r = vue.getBoundingClientRect(); cx = cx ?? r.width / 2; cy = cy ?? r.height / 2;
-    const nk = Math.max(0.25, Math.min(2, k * f)); tx = cx - (cx - tx) * nk / k; ty = cy - (cy - ty) * nk / k; k = nk; appliquer();
+    const nk = Math.max(tout ? 0.05 : 0.25, Math.min(2, k * f)); tx = cx - (cx - tx) * nk / k; ty = cy - (cy - ty) * nk / k; k = nk; appliquer();
   }
   const pts = new Map(); let depart = null, bouge = false, pince = null;
   vue.addEventListener('pointerdown', e => {
@@ -204,7 +205,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
     const r = vue.getBoundingClientRect();
     if (pts.size === 2 && pince) {
-      const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), nk = Math.max(0.25, Math.min(2, pince.k * d / pince.d));
+      const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), nk = Math.max(tout ? 0.05 : 0.25, Math.min(2, pince.k * d / pince.d));
       const cx = pince.cx - r.left, cy = pince.cy - r.top; tx = cx - (cx - pince.tx) * nk / pince.k; ty = cy - (cy - pince.ty) * nk / pince.k; k = nk; bouge = true; appliquer(); return;
     }
     if (!depart) return;
@@ -229,7 +230,8 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (a === 'moi') { focus = ego; ouverts = {}; dessiner(); premiereVue(); }
   });
   racineEl.querySelector('.ensemble').addEventListener('click', e => {
-    const a = e.target.closest('button')?.dataset.a; if (a === 'tout') toutVoir(); if (a === 'imprimer') print(); if (a === 'actes') listeActes();
+    const a = e.target.closest('button')?.dataset.a; if (a === 'tout') toutVoir(); if (a === 'imprimer') print(); if (a === 'actes') listeActes(); if (a === 'pepites') listePepites();
+    if (a === 'entier') { tout = !tout; if (tout) focus = ego; e.target.closest('button').textContent = tout ? 'Revenir à la vue simple' : 'Ouvrir l’arbre en entier'; dessiner(); if (tout) toutVoir(); else premiereVue(); }
   });
   const leg = racineEl.querySelector('.legende');
   const legBtn = leg.querySelector('button');
@@ -282,6 +284,7 @@ export function creerArbre(racineEl, data, opt = {}) {
       ${pa && (P[pa.h] || P[pa.w]) ? `<p class="lien-niv"><svg width="44" height="10" aria-hidden="true"><path d="M2 5 H42" stroke="var(--ink-soft)" stroke-width="${lienDe(p).w}" stroke-linecap="round" ${lienDe(p).d ? `stroke-dasharray="${lienDe(p).d}"` : ''}/></svg><span>Lien avec ses parents : <b>${esc(LIBNL[p.nl] || (p.nl && p.nl.startsWith('hyp') ? LIBNL.hypothese : 'non vérifié'))}</b></span></p>` : ''}
       <ul class="evts">${evt(`Né${e}`, p.na)}${!p.na ? evt(`Baptisé${e}`, p.ba) : ''}${unis}${evt(`Décédé${e}`, p.de)}</ul>
       ${p.me && p.me.length ? `<h3>Métier${p.me.length > 1 ? 's' : ''}</h3><p>${p.me.map(m => { const [x, y] = met(m); return esc(x) + (y ? ` (${esc(y)})` : ''); }).join(', ')}</p>` : ''}
+      ${p.pep ? `<div class="pep-bloc"><h3>✦ Pourquoi c’est une pépite</h3>${(p.pep.r || []).length ? `<p class="pep-r">${p.pep.r.map(r => `<span>${esc(r)}</span>`).join('')}</p>` : ''}${(p.pep.x || []).map(t => `<p>${esc(t)}</p>`).join('')}</div>` : ''}
       ${(p.so || []).length ? `<h3>Sources et actes lus (${p.so.length})</h3><ul class="sources">${p.so.map(x => { const pv = preuve(x.niv); return `<li>${pv ? `<span class="pv ${pv[1]}" title="${esc(pv[2])}">${pv[0]}</span>` : '<span class="pv"></span>'}<div>${x.ev ? `<b>${esc(x.ev.charAt(0).toUpperCase() + x.ev.slice(1))}</b> · ` : ''}${pv ? `<span class="niv">${esc(pv[2])}</span>` : ''}<p>${esc(x.t)}</p>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Voir sur le site des archives</a>` : ''}${opt.admin && x.l ? `<small>dossier de recherche, ligne ${x.l}</small>` : ''}</div></li>`; }).join('')}</ul>` : ''}
       ${(p.ac || []).length ? `<h3>Ses actes reproduits (${p.ac.length})</h3><div class="liens actes">${p.ac.map(i => data.actes[i]).filter(Boolean).map((a, j) => `<button data-acte="${p.ac[j]}"><b>${esc(a.titre)}</b><small>${esc(a.ref)}</small></button>`).join('')}</div>` : ''}
       ${pa && (P[pa.h] || P[pa.w]) ? `<h3>Ses parents</h3><div class="liens">${[pa.h, pa.w].filter(z => P[z]).map(lien).join('')}</div>` : ''}
@@ -333,6 +336,14 @@ export function creerArbre(racineEl, data, opt = {}) {
       <div class="liens actes">${(data.actes || []).map((a, i) => `<button data-acte="${i}"><b>${esc(a.titre)}</b><small>${esc(a.ref)}</small></button>`).join('')}</div></div>`;
     av.hidden = false; av.querySelector('.fermer').onclick = fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
     av.querySelectorAll('[data-acte]').forEach(b => b.onclick = () => ouvrirActe(+b.dataset.acte));
+  }
+  function listePepites() {
+    const L = Object.entries(P).filter(([, p]) => p.pep && !p.cache).sort((a, b) => Math.min(...(a[1].sosa || [9e9])) - Math.min(...(b[1].sosa || [9e9])));
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>✦ Les pépites de l’arbre</h2><button class="fermer">Fermer</button></div>
+      <p class="acte-ref">Les personnes sur qui on en sait plus que les actes habituels.</p>
+      <div class="liens actes">${L.map(([id, p]) => `<button data-voir="${esc(id)}"><b>${esc(nomComplet(p))}</b><small>${esc([[an(p.na) || an(p.ba), an(p.de)].filter(Boolean).join(' à '), (p.pep.r || []).join(', ') || ((p.pep.x || [''])[0].slice(0, 110) + '…')].filter(Boolean).join(' · '))}</small></button>`).join('')}</div></div>`;
+    av.hidden = false; av.querySelector('.fermer').onclick = fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
   }
   addEventListener('keydown', e => { if (e.key === 'Escape' && !av.hidden) fermerActe(); });
 
