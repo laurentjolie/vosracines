@@ -214,3 +214,12 @@ table.liste td:nth-child(4){white-space:nowrap}
 .acte-carte .liens{display:flex;flex-direction:column;gap:6px}
 .acte-carte .liens button{text-align:left;border:0;background:var(--bg-2);border-radius:8px;padding:10px 12px;min-height:44px}
 @media (max-width:719px){.ensemble{display:flex;top:124px;right:12px;left:auto}.ensemble [data-a=tout],.ensemble [data-a=imprimer]{display:none}}
+
+.sources{list-style:none;padding:0;margin:6px 0}
+.sources li{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.sources .pv{flex:none;width:20px;text-align:center;font-size:17px}
+.sources p{margin:2px 0 4px;font-size:15px;line-height:1.45;color:var(--ink)}
+.sources .niv{color:var(--ink-soft);font-size:14px}
+.sources a{font-size:15px}
+.sources small{display:block;color:var(--ink-soft);font-size:13px}
+.sources p,.sources a{overflow-wrap:anywhere}
