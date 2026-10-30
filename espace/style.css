@@ -301,3 +301,11 @@ details.niveaux li{margin:6px 0}
   .rl-notes.ouvert{transform:none}
   .rl-mobile{display:inline-flex;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:35}
 }
+.rl-genre{border:0;padding:0;margin:4px 0 2px;display:flex;flex-wrap:wrap;gap:6px}
+.rl-genre label{cursor:pointer}
+.rl-genre input{position:absolute;opacity:0}
+.rl-genre span{display:inline-block;border:1.5px solid var(--line-strong);border-radius:16px;padding:4px 12px;font-size:14px;font-weight:600}
+.rl-genre input:checked+span{background:var(--band-2);color:#fff;border-color:var(--band-2)}
+.rl-genre input:focus-visible+span{outline:2px solid var(--accent-2);outline-offset:2px}
+.rl-badge{display:inline-block;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:700;background:var(--bg-2)}
+.rl-badge.creuser{background:#F6E2B8;color:#6B4A0F}

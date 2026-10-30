@@ -1,6 +1,8 @@
 // Vos Racines : relecture du livre (30/10/2026). Toutes les doubles pages, le texte sélectionnable, chaque image nommée,
 // et les commentaires à côté. Les pages viennent de Firestore (arbres/{id}/livre/{n}, publiées depuis HQ par publier_livre.py).
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const GENRES = [['correction', 'Correction'], ['ambiance', 'Ambiance, ton'], ['creuser', 'À creuser']];
+const GLIB = Object.fromEntries(GENRES);
 const FONTE = '"Georgia", "Times New Roman", serif';
 const ctx = document.createElement('canvas').getContext('2d');
 
@@ -21,6 +23,7 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
       <aside class="rl-notes" aria-label="Commentaires">
         <h2 class="rl-ici"></h2>
         <form class="rl-form"><div class="rl-ref" hidden></div>
+          <fieldset class="rl-genre"><legend class="cache-visuel">Type de remarque</legend>${GENRES.map(([k, l], i) => `<label><input type="radio" name="genre" value="${k}" ${i === 0 ? 'checked' : ''}><span>${l}</span></label>`).join('')}</fieldset>
           <label class="cache-visuel" for="rl-texte">Votre commentaire</label>
           <textarea id="rl-texte" rows="4" placeholder="Votre remarque sur cette double page…"></textarea>
           <button class="btn btn-1" type="submit">Ajouter le commentaire</button><span class="note-ok" role="status"></span></form>
@@ -89,7 +92,7 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   function carte(r) {
     const quand = r.cree ? new Date(r.cree).toLocaleDateString('fr-FR', {day: 'numeric', month: 'long'}) : '';
     return `<article class="rl-com ${r.statut === 'fait' ? 'fait' : ''}" data-r="${esc(r.id)}">
-      <p class="rl-com-ref"><button class="btn-lien" data-aller="${r.page}">${r.ref ? `Image ${esc(r.ref)}` : `Page ${r.page}`}</button>${r.citation ? ` : « ${esc(r.citation)} »` : ''}</p>
+      <p class="rl-com-ref">${r.genre && r.genre !== 'correction' ? `<span class="rl-badge ${esc(r.genre)}">${esc(GLIB[r.genre] || '')}</span> ` : ''}<button class="btn-lien" data-aller="${r.page}">${r.ref ? `Image ${esc(r.ref)}` : `Page ${r.page}`}</button>${r.citation ? ` : « ${esc(r.citation)} »` : ''}</p>
       <p class="rl-com-txt">${esc(r.texte)}</p>
       <p class="petit">${admin ? esc(r.auteur) + ' · ' : ''}${esc(quand)}${r.statut === 'fait' ? ' · corrigé' : ''}${r.reponse ? ` · ${esc(r.reponse)}` : ''}</p>
       <div class="rangee">${admin ? `<button class="btn" data-fait="${esc(r.id)}">${r.statut === 'fait' ? 'Rouvrir' : 'Marquer corrigé'}</button>` : ''}${admin || r.auteur === U.email ? `<button class="btn-lien" data-suppr="${esc(r.id)}">Supprimer</button>` : ''}</div></article>`;
@@ -114,7 +117,8 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   form.onsubmit = async e => {
     e.preventDefault();
     const t = txt.value.trim(); if (!t) { txt.focus(); return; }
-    const r = {page: ref ? ref.page : pagesDe(courante)[0], ref: ref && ref.ref || '', citation: ref && ref.citation ? ref.citation.slice(0, 1000) : '', texte: t};
+    const genre = (form.querySelector('input[name=genre]:checked') || {}).value || 'correction';
+    const r = {page: ref ? ref.page : pagesDe(courante)[0], ref: ref && ref.ref || '', citation: ref && ref.citation ? ref.citation.slice(0, 1000) : '', texte: t, genre};
     const b = form.querySelector('button[type=submit]'); b.disabled = true;
     try { const id = await S.ajouterRetour(meta.id, r); retours.push({...r, id, auteur: U.email, cree: new Date().toISOString(), statut: 'ouvert'}); txt.value = ''; poserRef(null); form.querySelector('.note-ok').textContent = 'Merci, c’est noté.'; setTimeout(() => form.querySelector('.note-ok').textContent = '', 2500); afficher(); }
     catch (err) { console.error(err); form.querySelector('.note-ok').textContent = 'L’envoi n’a pas marché. Réessayez dans un instant.'; }
