@@ -9,7 +9,7 @@ const PREUVE = {acte: ['●', 'p-acte', 'Acte lu', 'nous avons lu l’acte'], pi
 // 29/10 : le trait dit la solidite du lien de parente (du parent vers l'enfant), pas seulement la personne
 const LIEN = {acte: {w: 3, d: '', lib: 'Lien prouvé par un acte'}, piste: {w: 2.2, d: '9 6', lib: 'Lien probable (piste)'},
   hypothese: {w: 2.2, d: '1.5 6', lib: 'Lien supposé (hypothèse)'}, famille: {w: 2.2, d: '12 4 2 4', lib: 'Lien donné par la famille'}, inconnu: {w: 2, d: '4 4', lib: 'Lien non vérifié'}};
-const lienDe = x => { const n = x && x.nl; if (!n) return LIEN.inconnu; if (n.startsWith('hyp')) return LIEN.hypothese; return LIEN[n] || LIEN.piste; };
+const lienDe = x => { const n = x && ((x.li && x.li.niv) || x.nl); if (!n) return LIEN.inconnu; if (n.startsWith('hyp')) return LIEN.hypothese; return LIEN[n] || LIEN.piste; };
 const LIBNL = {acte: 'prouvé par un acte', piste: 'probable : une piste, pas encore d’acte lu', hypothese: 'supposé : une hypothèse à confirmer', famille: 'donné par la famille'};
 const preuve = n => PREUVE[n] || (n && n.startsWith('hyp') ? PREUVE.hypothese : n ? PREUVE.piste : null);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -58,6 +58,11 @@ export function creerArbre(racineEl, data, opt = {}) {
     for (const z of [f.h, f.w]) if (z) enfants[z] = (enfants[z] || []).concat(f.enfants || []);
   }
   const ego = P[data.racine] ? data.racine : Object.keys(P)[0];
+  const R = data.registre || {};
+  const NIVR = {'prouvé': 'Prouvé : lu sur l’image', 'piste forte': 'Piste forte : relevé avec cote, ou deux sources concordantes', 'piste': 'Piste : index ou arbre en ligne', 'hypothèse': 'Hypothèse : un seul indice', 'écarté': 'Écarté : homonyme ou document rejeté'};
+  const RANGR = {acte: 0, piste: 1, hypothese: 2, ecarte: 3};
+  const triRa = ra => ra.filter(([i]) => R[i]).sort((x, y) => (RANGR[R[x[0]].niv] ?? 1) - (RANGR[R[y[0]].niv] ?? 1) || String(R[x[0]].d || '').localeCompare(String(R[y[0]].d || '')));
+  const nivLien = x => { const n = (x.li && x.li.niv) || x.nl || ''; return n.startsWith('hyp') ? 'hypothese' : n; };
   const egoNom = (P[ego] && (P[ego].u || P[ego].p) || '').split(' ')[0];
   let focus = ego, ouverts = {}, choisi = null, k = 1, tx = 0, ty = 0, positions = {}, tout = false;
 
@@ -151,11 +156,11 @@ export function creerArbre(racineEl, data, opt = {}) {
       const mid = n.y - GAP_GEN / 2, cl = colLien(n), L = lienDe(P[n.id]);
       const st = `stroke="${cl}" stroke-width="${L.w}" fill="none" stroke-linecap="round" ${L.d ? `stroke-dasharray="${L.d}"` : ''}`;
       const ps = [n.pere, n.mere].filter(Boolean);
-      paths += `<path d="M${n.cx} ${n.y} V${mid}" ${st}><title>${L.lib}</title></path>`;
-      if (ps.length === 2) paths += `<path d="M${ps[0].cx} ${ps[0].y + h} V${mid} H${ps[1].cx} V${ps[1].y + h}" ${st} stroke-linejoin="round"><title>${L.lib}</title></path>`;
-      else paths += `<path d="M${ps[0].cx} ${ps[0].y + h} V${mid} H${n.cx}" ${st}><title>${L.lib}</title></path>`;
+      // 30/10 : le trait est cliquable et ouvre l'explication du lien
+      const dd = [`M${n.cx} ${n.y} V${mid}`, ps.length === 2 ? `M${ps[0].cx} ${ps[0].y + h} V${mid} H${ps[1].cx} V${ps[1].y + h}` : `M${ps[0].cx} ${ps[0].y + h} V${mid} H${n.cx}`];
+      paths += `<g class="lien" data-lien="${esc(n.id)}"><title>${L.lib} : touchez pour savoir pourquoi</title>${dd.map(d => `<path class="vis" d="${d}" ${st} stroke-linejoin="round"/>`).join('')}${dd.map(d => `<path class="clic" d="${d}" stroke="transparent" stroke-width="18" fill="none"/>`).join('')}</g>`;
       const m = n.f && n.f.mar;
-      if (ps.length === 2) html += `<span class="anneau" style="left:${(ps[0].cx + ps[1].cx) / 2}px;top:${mid}px">∞${m && m.d ? ' ' + esc(an(m)) : ''}</span>`;
+      if (ps.length === 2) html += `<span class="anneau" data-lien="${esc(n.id)}" title="Touchez pour savoir pourquoi ce lien" style="left:${(ps[0].cx + ps[1].cx) / 2}px;top:${mid}px">∞${m && m.d ? ' ' + esc(an(m)) : ''}</span>`;
     }
     for (const n of L.plusBtns) html += `<button class="plus" data-plus="${esc(n.id)}" style="left:${n.cx - 75}px;top:${n.y - 52}px">+ ${PLUS} générations</button>`;
     if (L.desc.length) {
@@ -219,6 +224,7 @@ export function creerArbre(racineEl, data, opt = {}) {
   vue.addEventListener('wheel', e => { e.preventDefault(); const r = vue.getBoundingClientRect(); zoomer(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top); }, {passive: false});
   vue.addEventListener('click', e => {
     if (bouge) { bouge = false; return; }
+    const li = e.target.closest('[data-lien]'); if (li) { ouvrirLien(li.dataset.lien); return; }
     const pl = e.target.closest('[data-plus]');
     if (pl) { const id = pl.dataset.plus; const n = positions[id]; ouverts[id] = (n ? n.g : 0) + PLUS; dessiner(); centrerSur(id); return; }
     const c = e.target.closest('.carte[data-id]'); if (c) ouvrirFiche(c.dataset.id);
@@ -281,11 +287,12 @@ export function creerArbre(racineEl, data, opt = {}) {
       <h2>${esc(nomComplet(p))}</h2>
       <p class="parente">${esc(id === ego ? 'C’est la personne de ce livre.' : parente(p, egoNom) || 'Famille')}${p.fam ? ' · Informations transmises par la famille' : ''}</p>
       ${pv ? `<p><span class="${pv[1]}">${pv[0]}</span> <b>${esc(pv[2])}</b> : ${esc(pv[3])}</p>` : ''}
-      ${pa && (P[pa.h] || P[pa.w]) ? `<p class="lien-niv"><svg width="44" height="10" aria-hidden="true"><path d="M2 5 H42" stroke="var(--ink-soft)" stroke-width="${lienDe(p).w}" stroke-linecap="round" ${lienDe(p).d ? `stroke-dasharray="${lienDe(p).d}"` : ''}/></svg><span>Lien avec ses parents : <b>${esc(LIBNL[p.nl] || (p.nl && p.nl.startsWith('hyp') ? LIBNL.hypothese : 'non vérifié'))}</b></span></p>` : ''}
+      ${pa && (P[pa.h] || P[pa.w]) ? `<p class="lien-niv"><svg width="44" height="10" aria-hidden="true"><path d="M2 5 H42" stroke="var(--ink-soft)" stroke-width="${lienDe(p).w}" stroke-linecap="round" ${lienDe(p).d ? `stroke-dasharray="${lienDe(p).d}"` : ''}/></svg><span>Lien avec ses parents : <b>${esc(LIBNL[nivLien(p)] || 'non vérifié')}</b> <button class="btn-lien" data-pourquoi="${esc(id)}">Pourquoi ?</button></span></p>` : ''}
       <ul class="evts">${evt(`Né${e}`, p.na)}${!p.na ? evt(`Baptisé${e}`, p.ba) : ''}${unis}${evt(`Décédé${e}`, p.de)}</ul>
       ${p.me && p.me.length ? `<h3>Métier${p.me.length > 1 ? 's' : ''}</h3><p>${p.me.map(m => { const [x, y] = met(m); return esc(x) + (y ? ` (${esc(y)})` : ''); }).join(', ')}</p>` : ''}
       ${p.pep ? `<div class="pep-bloc"><h3>✦ Pourquoi c’est une pépite</h3>${(p.pep.r || []).length ? `<p class="pep-r">${p.pep.r.map(r => `<span>${esc(r)}</span>`).join('')}</p>` : ''}${(p.pep.x || []).map(t => `<p>${esc(t)}</p>`).join('')}</div>` : ''}
-      ${(p.so || []).length ? `<h3>Sources et actes lus (${p.so.length})</h3><ul class="sources">${p.so.map(x => { const pv = preuve(x.niv); return `<li>${pv ? `<span class="pv ${pv[1]}" title="${esc(pv[2])}">${pv[0]}</span>` : '<span class="pv"></span>'}<div>${x.ev ? `<b>${esc(x.ev.charAt(0).toUpperCase() + x.ev.slice(1))}</b> · ` : ''}${pv ? `<span class="niv">${esc(pv[2])}</span>` : ''}<p>${esc(x.t)}</p>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Voir sur le site des archives</a>` : ''}${opt.admin && x.l ? `<small>dossier de recherche, ligne ${x.l}</small>` : ''}</div></li>`; }).join('')}</ul>` : ''}
+      ${(p.ra || []).length ? `<h3>Actes et documents consultés (${p.ra.length})</h3><div class="liens actes registre">${triRa(p.ra).map(([i, r]) => { const a = R[i]; const pv = preuve(a.niv); return `<button data-reg="${esc(i)}"><span class="pv ${pv ? pv[1] : ''}">${pv ? pv[0] : ''}</span><span><b>${esc(a.t || a.ty)}</b><small>${esc([NIVR[a.nv] || (pv && pv[2]), r && r !== 'sujet' && r !== 'défunt' ? 'comme ' + r : ''].filter(Boolean).join(' · '))}</small></span></button>`; }).join('')}</div>` : ''}
+      ${(p.so || []).length ? `<h3>${(p.ra || []).length ? 'Autres notes de recherche' : 'Sources et actes lus'} (${p.so.length})</h3><ul class="sources">${p.so.map(x => { const pv = preuve(x.niv); return `<li>${pv ? `<span class="pv ${pv[1]}" title="${esc(pv[2])}">${pv[0]}</span>` : '<span class="pv"></span>'}<div>${x.ev ? `<b>${esc(x.ev.charAt(0).toUpperCase() + x.ev.slice(1))}</b> · ` : ''}${pv ? `<span class="niv">${esc(pv[2])}</span>` : ''}<p>${esc(x.t)}</p>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Voir sur le site des archives</a>` : ''}${opt.admin && x.l ? `<small>dossier de recherche, ligne ${x.l}</small>` : ''}</div></li>`; }).join('')}</ul>` : ''}
       ${(p.ac || []).length ? `<h3>Ses actes reproduits (${p.ac.length})</h3><div class="liens actes">${p.ac.map(i => data.actes[i]).filter(Boolean).map((a, j) => `<button data-acte="${p.ac[j]}"><b>${esc(a.titre)}</b><small>${esc(a.ref)}</small></button>`).join('')}</div>` : ''}
       ${pa && (P[pa.h] || P[pa.w]) ? `<h3>Ses parents</h3><div class="liens">${[pa.h, pa.w].filter(z => P[z]).map(lien).join('')}</div>` : ''}
       ${ks.length ? `<h3>Ses enfants</h3><div class="liens">${ks.map(lien).join('')}</div>` : ''}
@@ -297,6 +304,8 @@ export function creerArbre(racineEl, data, opt = {}) {
     fiche.querySelector('[data-recentrer]').onclick = () => { fermerFiche(); recentrer(id); };
     fiche.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => voir(b.dataset.voir));
     fiche.querySelectorAll('[data-acte]').forEach(b => b.onclick = () => ouvrirActe(+b.dataset.acte));
+    fiche.querySelectorAll('[data-reg]').forEach(b => b.onclick = () => ouvrirRegistre(b.dataset.reg));
+    fiche.querySelectorAll('[data-pourquoi]').forEach(b => b.onclick = () => ouvrirLien(b.dataset.pourquoi));
     fiche.querySelector('.fermer').focus({preventScroll: true});
   }
   function fermerFiche() { fiche.hidden = true; choisi = null; cartesEl.querySelectorAll('.choisie').forEach(c => c.classList.remove('choisie')); }
@@ -329,6 +338,48 @@ export function creerArbre(racineEl, data, opt = {}) {
     try {
       const src = opt.image ? await opt.image(a.img) : null; const box = av.querySelector('.acte-img'); if (!box) return;
       box.innerHTML = src ? `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${esc(a.titre)}"></a><span class="petit">Touchez l’image pour l’ouvrir en grand.</span>` : '<span class="petit">Image non disponible.</span>';
+    } catch (e) { const box = av.querySelector('.acte-img'); if (box) box.innerHTML = '<span class="petit">Image non disponible.</span>'; }
+  }
+  // 30/10 : explication d'un lien enfant -> parents, et fiche d'un acte du registre des actes vus
+  function ouvrirLien(id) {
+    const p = P[id], pa = parents[id]; if (!p || p.cache || !pa) return;
+    const li = p.li || {}, n = nivLien(p), L = lienDe(p), qui = [pa.h, pa.w].filter(z => P[z] && !P[z].cache);
+    const ac = (li.ac || []).filter(i => R[i]);
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>${esc(nomComplet(p))} et ses parents</h2><button class="fermer">Fermer</button></div>
+      <p class="lien-niv grand"><svg width="56" height="12" aria-hidden="true"><path d="M2 6 H54" stroke="var(--ink)" stroke-width="${L.w + 0.6}" stroke-linecap="round" ${L.d ? `stroke-dasharray="${L.d}"` : ''}/></svg><b>${esc(L.lib)}</b></p>
+      <p class="pourquoi">${esc(li.pq || 'Nous n’avons pas encore consigné l’explication de ce lien.')}</p>
+      ${ac.length ? `<h3>${ac.length > 1 ? 'Les documents qui le fondent' : 'Le document qui le fonde'}</h3><div class="liens actes registre">${ac.map(i => { const a = R[i], pv = preuve(a.niv); return `<button data-reg="${esc(i)}"><span class="pv ${pv ? pv[1] : ''}">${pv ? pv[0] : ''}</span><span><b>${esc(a.t)}</b><small>${esc(a.pr || '')}</small></span></button>`; }).join('')}</div>` : ''}
+      <h3>Les personnes</h3><div class="liens"><button data-voir="${esc(id)}">${esc(nomComplet(p))}</button>${qui.map(z => `<button data-voir="${esc(z)}">${esc(nomComplet(P[z]))}</button>`).join('')}</div>
+      <details class="niveaux"><summary>Comment nous classons les liens</summary><ul>
+        <li><b>Prouvé</b> : nous avons lu, sur l’image du registre, un acte qui nomme les parents (naissance, baptême, mariage, décès).</li>
+        <li><b>Probable</b> : pas encore d’acte lu, mais un relevé indexé avec sa cote, ou deux sources indépendantes qui concordent.</li>
+        <li><b>Supposé</b> : un seul indice, ou un recoupement par élimination. À confirmer.</li>
+        <li><b>Donné par la famille</b> : personnes vivantes ou récentes ; nous ne faisons pas de recherche sur les vivants.</li></ul></details></div>`;
+    av.hidden = false; av.querySelector('.fermer').onclick = fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
+    av.querySelectorAll('[data-reg]').forEach(b => b.onclick = () => ouvrirRegistre(b.dataset.reg, () => ouvrirLien(id)));
+    av.querySelector('.fermer').focus();
+  }
+  async function ouvrirRegistre(i, retour) {
+    const a = R[i]; if (!a) return; const pv = preuve(a.niv);
+    const qui = Object.entries(P).filter(([, x]) => !x.cache && (x.ra || []).some(([j]) => j === i)).map(([z]) => z);
+    const quand = a.d ? dateLongue(a.d) : '';
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>${esc(a.t || a.ty)}</h2><button class="fermer">${retour ? 'Retour' : 'Fermer'}</button></div>
+      <p class="acte-ref">${esc([a.ty, quand, a.lieu].filter(Boolean).join(' · '))}</p>
+      <p class="niv-acte"><span class="pv ${pv ? pv[1] : ''}">${pv ? pv[0] : ''}</span> <b>${esc(NIVR[a.nv] || (pv ? pv[2] : ''))}</b>${a.pn ? ` : ${esc(a.pn)}` : ''}</p>
+      ${a.pr ? `<h3>Ce que ce document établit</h3><p>${esc(a.pr)}</p>` : ''}
+      ${a.img ? '<div class="acte-img"><span class="petit">Chargement de l’image…</span></div>' : ''}
+      ${a.tr ? `<h3>Ce qu’on y lit</h3><div class="acte-texte">« ${esc(a.tr)} »</div>` : ''}
+      <h3>Où le trouver</h3><p class="acte-ref">${esc([a.so, a.co && !(a.so || '').includes(a.co) ? 'cote ' + a.co : '', a.vu ? 'vue ' + a.vu : ''].filter(Boolean).join(', ') || 'Source non précisée')}</p>
+      ${a.u ? `<p><a href="${esc(a.u)}" target="_blank" rel="noopener noreferrer">Voir sur le site des archives</a></p>` : ''}
+      ${qui.length ? `<h3>Dans ce document</h3><div class="liens">${qui.map(z => `<button data-voir="${esc(z)}">${esc(nomComplet(P[z]))}</button>`).join('')}</div>` : ''}
+      ${opt.admin && (a.ln || []).length ? `<p class="petit">Dossier de recherche, ligne${a.ln.length > 1 ? 's' : ''} ${a.ln.join(', ')}</p>` : ''}</div>`;
+    av.hidden = false; av.querySelector('.fermer').onclick = retour || fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
+    av.querySelector('.fermer').focus();
+    if (a.img) try {
+      const src = opt.image ? await opt.image(a.img) : null; const box = av.querySelector('.acte-img'); if (!box) return;
+      box.innerHTML = src ? `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${esc(a.t || '')}"></a><span class="petit">Touchez l’image pour l’ouvrir en grand.</span>` : '<span class="petit">Image non disponible.</span>';
     } catch (e) { const box = av.querySelector('.acte-img'); if (box) box.innerHTML = '<span class="petit">Image non disponible.</span>'; }
   }
   function listeActes() {

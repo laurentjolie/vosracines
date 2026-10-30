@@ -2,6 +2,7 @@
 // et envoyé par l'archiviste), arbres en lecture selon le compte, menu administrateur.
 import {FIREBASE, EMULATEURS, CONTACT} from './config.js';
 import {creerArbre, nomComplet} from './arbre.js';
+import {ouvrirRelecture} from './relecture.js';
 
 const $app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,8 +21,8 @@ async function sourceFirebase() {
   await fb.setPersistence(auth, fb.browserLocalPersistence);
   const morceaux = async (id, quoi) => {
     const qs = await fb.getDocs(fb.collection(db, 'arbres', id, quoi));
-    const out = {personnes: {}, familles: [], actes: []};
-    qs.docs.sort((a, b) => +a.id - +b.id).forEach(d => { let x = d.data(); if (typeof x.d === 'string') x = JSON.parse(x.d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); out.actes.push(...(x.actes || [])); });
+    const out = {personnes: {}, familles: [], actes: [], registre: {}};
+    qs.docs.sort((a, b) => +a.id - +b.id).forEach(d => { let x = d.data(); if (typeof x.d === 'string') x = JSON.parse(x.d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); out.actes.push(...(x.actes || [])); Object.assign(out.registre, x.registre || {}); });
     return out;
   };
   return {
@@ -46,8 +47,20 @@ async function sourceFirebase() {
     envoyerLienA: email => fb.addDoc(fb.collection(db, 'demandes_acces'), {email, cree: fb.serverTimestamp(), par: 'admin'}),
     image: async (id, nom) => { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'images', nom)); return d.exists() ? d.data().d : null; },
     sortir: () => fb.signOut(auth),
+    // 30/10 : relecture du livre
+    page: async (id, n) => { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'livre', String(n))); return d.exists() ? JSON.parse(d.data().d) : null; },
+    retours: async (id, email) => {
+      const c = fb.collection(db, 'arbres', id, 'retours');
+      const qs = await fb.getDocs(email ? fb.query(c, fb.where('auteur', '==', email)) : c);
+      return qs.docs.map(d => { const x = d.data(); return {...x, id: d.id, cree: x.cree && x.cree.toDate ? x.cree.toDate().toISOString() : x.cree}; });
+    },
+    ajouterRetour: async (id, r) => (await fb.addDoc(fb.collection(db, 'arbres', id, 'retours'), {...r, auteur: U.email, cree: fb.serverTimestamp(), statut: 'ouvert'})).id,
+    majRetour: (id, rid, x) => fb.updateDoc(fb.doc(db, 'arbres', id, 'retours', rid), x),
+    supprimerRetour: (id, rid) => fb.deleteDoc(fb.doc(db, 'arbres', id, 'retours', rid)),
+    ouvrirRelecture: (id, oui) => fb.updateDoc(fb.doc(db, 'arbres', id), {relecture: !!oui}),
   };
 }
+let devRetours = [];
 async function sourceDev() {   // données locales pour essayer l'interface sans Firebase
   const idx = await (await fetch('dev/arbres/index.json')).json();
   const comptes = {};
@@ -66,6 +79,11 @@ async function sourceDev() {   // données locales pour essayer l'interface sans
     envoyerLienA: async () => {},
     image: async (id, nom) => `dev/arbres/images/${id}/${nom}`,
     sortir: async () => { ecrire('vr-dev-sortie', '1'); location.reload(); },
+    page: async (id, n) => (await fetch(`dev/livre/${id}/${n}.json`)).json(),
+    retours: async () => [...devRetours],
+    ajouterRetour: async (id, r) => { const x = {...r, id: 'r' + Date.now(), auteur: user.email, cree: new Date().toISOString(), statut: 'ouvert'}; devRetours.push(x); return x.id; },
+    majRetour: async () => {}, supprimerRetour: async (id, rid) => { devRetours = devRetours.filter(x => x.id !== rid); },
+    ouvrirRelecture: async () => {},
   };
 }
 
@@ -178,16 +196,25 @@ async function accueil() {
   const c = await S.compte(email);
   if (!vuComme) U.prenom = c.prenom || '';
   const metas = (await Promise.all((c.arbres || []).map(id => S.meta(id).catch(() => null)))).filter(Boolean);
-  if (metas.length === 1 && !vuComme) return ouvrirArbre(metas[0].id, 'client');
+  const relire = m => m.livre && (m.relecture || U.admin);
+  if (metas.length === 1 && !vuComme && !relire(metas[0])) return ouvrirArbre(metas[0].id, 'client');
   document.title = 'Vos livres · Vos Racines';
   $app.innerHTML = barre() + `<main class="page"><h1>Vos livres</h1>
     ${metas.length ? `<div class="grille">${metas.map(m => `<article class="livre"><h2>${esc(m.titre)}</h2><p class="st">${esc(m.sous_titre || '')}</p>
       <div class="chiffres"><div><b>${m.n_ancetres || 0}</b><span>ancêtres</span></div><div><b>${m.n_personnes || 0}</b><span>personnes</span></div><div><b>${m.generations || 0}</b><span>générations</span></div></div>
-      <div class="rangee"><button class="btn btn-1" data-o="${esc(m.id)}">Ouvrir l’arbre</button></div>
+      <div class="rangee"><button class="btn btn-1" data-o="${esc(m.id)}">Ouvrir l’arbre</button>${relire(m) ? `<button class="btn" data-relire="${esc(m.id)}">Relire le livre</button>` : ''}</div>
       <p class="maj">Mis à jour le ${esc(dateFr(m.maj))}</p></article>`).join('')}</div>`
     : `<p>Votre arbre n’est pas encore en ligne. Nous vous écrirons dès qu’il le sera. Une question ? <a href="mailto:${CONTACT}">${CONTACT}</a></p>`}</main>`;
   brancherBarre();
   $app.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ouvrirArbre(b.dataset.o, 'client'));
+  $app.querySelectorAll('[data-relire]').forEach(b => b.onclick = () => relecture(metas.find(m => m.id === b.dataset.relire), false));
+}
+async function relecture(meta, admin) {
+  arbreActif = {id: meta.id, version: 'relecture'};
+  document.title = `Relire ${meta.titre} · Vos Racines`;
+  $app.innerHTML = barre(meta.titre) + '<div id="relecture"></div>';
+  brancherBarre();
+  ouvrirRelecture(document.getElementById('relecture'), meta, S, U, {admin});
 }
 const dateFr = d => { if (!d) return ''; const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('fr-FR', {day: 'numeric', month: 'long', year: 'numeric'}); };
 
@@ -219,7 +246,7 @@ async function pageAdmin(onglet) {
       <table class="liste"><thead><tr><th>Arbre</th><th>Clients</th><th class="num">Ancêtres</th><th>Mis à jour</th><th></th></tr></thead><tbody>
       ${arbres.map(a => `<tr data-f="${esc((a.titre + ' ' + lecteurs(a.id).join(' ')).toLowerCase())}"><td><b>${esc(a.titre)}</b><br><span class="petit">${esc(a.sous_titre || '')}</span></td>
         <td>${lecteurs(a.id).map(esc).join('<br>') || '<span class="petit">aucun</span>'}</td><td class="num">${a.n_ancetres || 0}</td><td>${esc(a.maj ? new Date(a.maj).toLocaleDateString('fr-FR') : '')}</td>
-        <td><div class="rangee"><button class="btn btn-1" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button><button class="btn" data-o="${esc(a.id)}" data-v="client">Vue client</button></div></td></tr>`).join('')}
+        <td><div class="rangee"><button class="btn btn-1" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button><button class="btn" data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.livre ? `<button class="btn" data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}</div></td></tr>`).join('')}
       </tbody></table>` : `<h1>Clients</h1>
       <form class="form-compte" id="fc"><b>Créer ou modifier un accès</b>
         <label class="etiq" for="fc-email">Adresse e-mail du client</label><input id="fc-email" type="email" required>
@@ -232,6 +259,7 @@ async function pageAdmin(onglet) {
   brancherBarre();
   $app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => pageAdmin(b.dataset.t));
   $app.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ouvrirArbre(b.dataset.o, b.dataset.v));
+  $app.querySelectorAll('[data-rl]').forEach(b => b.onclick = () => relecture(arbres.find(a => a.id === b.dataset.rl), true));
   const fl = $app.querySelector('#filtre');
   if (fl) fl.oninput = () => { const q = fl.value.toLowerCase(); $app.querySelectorAll('tr[data-f]').forEach(tr => tr.hidden = !tr.dataset.f.includes(q)); };
   const fc = $app.querySelector('#fc');
