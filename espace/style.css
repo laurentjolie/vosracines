@@ -309,3 +309,39 @@ details.niveaux li{margin:6px 0}
 .rl-genre input:focus-visible+span{outline:2px solid var(--accent-2);outline-offset:2px}
 .rl-badge{display:inline-block;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:700;background:var(--bg-2)}
 .rl-badge.creuser{background:#F6E2B8;color:#6B4A0F}
+/* 30/10 : orienter le livre (premier jet vers bon à tirer) */
+.btn-2{background:var(--accent-2);border-color:var(--accent-2);color:#2E2117}
+.orientation .or-int{max-width:980px;margin:0 auto}
+.or-chapo{font-size:18px;max-width:720px}
+.or-etapes{list-style:none;counter-reset:et;padding:0;margin:24px 0 0}
+.or-etapes>li{counter-increment:et;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px 20px;margin-bottom:18px;position:relative}
+.or-etapes>li>h2{margin:0 0 4px;font-size:21px;display:flex;align-items:center;gap:10px}
+.or-etapes>li>h2:before{content:counter(et);display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--band);color:var(--band-2);font:700 15px var(--f-ui)}
+.or-etapes .aide{margin:0 0 12px;color:var(--ink-soft)}
+.or-grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.or-carte{display:flex;flex-direction:column;border:2px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;background:#fff;transition:border-color .15s,box-shadow .15s}
+.or-carte input{position:absolute;opacity:0}
+.or-carte:hover{border-color:var(--accent-2)}
+.or-carte.choisie{border-color:var(--accent);box-shadow:0 0 0 3px rgba(168,68,30,.18)}
+.or-carte:focus-within{outline:2px solid var(--accent-2);outline-offset:2px}
+.or-vign{display:grid;place-items:center;aspect-ratio:148/210;background:var(--bg-2) center/cover no-repeat;color:var(--ink-soft);font-size:14px;text-align:center;padding:8px}
+.or-nom{padding:8px 10px 10px;display:flex;flex-direction:column;gap:2px}
+.or-nom small{color:var(--ink-soft);font-size:13px;line-height:1.35}
+.or-depot{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.or-depots{list-style:none;padding:0;margin:12px 0 0}
+.or-depots li{display:flex;gap:10px;align-items:baseline;border-top:1px solid var(--line);padding:8px 0}
+.or-depots li span{flex:1;word-break:break-word}
+.or-images{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.or-image{display:flex;flex-direction:column;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;cursor:pointer;position:relative}
+.or-image input{position:absolute;top:10px;left:10px;width:22px;height:22px;accent-color:var(--accent)}
+.or-image img,.or-image .or-vign{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.or-image>span{padding:8px 10px 10px;display:flex;flex-direction:column;gap:3px}
+.or-image small{color:var(--ink-soft);font-size:13px}
+.or-image:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px rgba(168,68,30,.18)}
+.or-lien{margin-top:14px}.or-lien input{flex:1;min-width:220px;min-height:44px;font:16px var(--f-ui);border:1.5px solid var(--line-strong);border-radius:8px;padding:0 10px}
+.or-urls{padding-left:18px;font-size:14px}
+.or-prive{display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:15px}
+.or-etapes textarea{width:100%;font:16px var(--f-ui);border:1.5px solid var(--line-strong);border-radius:8px;padding:10px;background:#fff;resize:vertical}
+.or-pied{position:sticky;bottom:0;background:var(--bg);padding:12px 0 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.or-pied p{flex-basis:100%;margin:0}
+.or-recus{margin:0 0 16px}.or-recus .note{white-space:pre-wrap;margin:8px 0}

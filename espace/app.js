@@ -3,6 +3,7 @@
 import {FIREBASE, EMULATEURS, CONTACT} from './config.js';
 import {creerArbre, nomComplet} from './arbre.js';
 import {ouvrirRelecture} from './relecture.js';
+import {ouvrirOrientation} from './orientation.js';
 
 const $app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -58,9 +59,22 @@ async function sourceFirebase() {
     majRetour: (id, rid, x) => fb.updateDoc(fb.doc(db, 'arbres', id, 'retours', rid), x),
     supprimerRetour: (id, rid) => fb.deleteDoc(fb.doc(db, 'arbres', id, 'retours', rid)),
     ouvrirRelecture: (id, oui) => fb.updateDoc(fb.doc(db, 'arbres', id), {relecture: !!oui}),
+    // 30/10 : orientation du livre (premier jet -> BAT)
+    ouvrirOrientationClient: (id, oui) => fb.updateDoc(fb.doc(db, 'arbres', id), {orientation: !!oui}),
+    proposition: async id => { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'proposition', '0')); return d.exists() ? JSON.parse(d.data().d) : null; },
+    choix: async (id, email) => { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'choix', email)); return d.exists() ? d.data() : null; },
+    tousChoix: async id => (await fb.getDocs(fb.collection(db, 'arbres', id, 'choix'))).docs.map(d => ({email: d.id, ...d.data()})),
+    enregistrerChoix: (id, email, x) => fb.setDoc(fb.doc(db, 'arbres', id, 'choix', email), {...x, maj: fb.serverTimestamp()}),
+    mesDepots: async (id, email) => (await fb.getDocs(email ? fb.query(fb.collection(db, 'arbres', id, 'depots'), fb.where('auteur', '==', email)) : fb.collection(db, 'arbres', id, 'depots'))).docs.map(d => ({id: d.id, ...d.data()})),
+    deposer: async (id, m, parts) => {
+      const ref = await fb.addDoc(fb.collection(db, 'arbres', id, 'depots'), {...m, auteur: U.email, morceaux: parts.length, note: '', cree: fb.serverTimestamp(), complet: false});
+      for (const [k, d] of parts.entries()) await fb.setDoc(fb.doc(db, 'arbres', id, 'depots', ref.id, 'm', String(k)), {d});
+      await fb.updateDoc(ref, {complet: true}); return ref.id;
+    },
+    supprimerDepot: (id, did) => fb.deleteDoc(fb.doc(db, 'arbres', id, 'depots', did)),
   };
 }
-let devRetours = [];
+let devRetours = [], devChoix = null, devDepots = [];
 async function sourceDev() {   // données locales pour essayer l'interface sans Firebase
   const idx = await (await fetch('dev/arbres/index.json')).json();
   const comptes = {};
@@ -84,6 +98,13 @@ async function sourceDev() {   // données locales pour essayer l'interface sans
     ajouterRetour: async (id, r) => { const x = {...r, id: 'r' + Date.now(), auteur: user.email, cree: new Date().toISOString(), statut: 'ouvert'}; devRetours.push(x); return x.id; },
     majRetour: async () => {}, supprimerRetour: async (id, rid) => { devRetours = devRetours.filter(x => x.id !== rid); },
     ouvrirRelecture: async () => {},
+    ouvrirOrientationClient: async () => {},
+    proposition: async id => { try { return await (await fetch(`dev/proposition/${id}.json`)).json(); } catch (e) { return null; } },
+    choix: async () => devChoix, tousChoix: async () => devChoix ? [{email: user.email, ...devChoix}] : [],
+    enregistrerChoix: async (id, e, x) => { devChoix = x; },
+    mesDepots: async () => [...devDepots],
+    deposer: async (id, m, parts) => { const x = {...m, id: 'd' + Date.now(), complet: true}; devDepots.push(x); return x.id; },
+    supprimerDepot: async (id, did) => { devDepots = devDepots.filter(x => x.id !== did); },
   };
 }
 
@@ -197,17 +218,34 @@ async function accueil() {
   if (!vuComme) U.prenom = c.prenom || '';
   const metas = (await Promise.all((c.arbres || []).map(id => S.meta(id).catch(() => null)))).filter(Boolean);
   const relire = m => m.livre && (m.relecture || U.admin);
-  if (metas.length === 1 && !vuComme && !relire(metas[0])) return ouvrirArbre(metas[0].id, 'client');
+  const orienter = m => m.orientation || (U.admin && m.proposition);
+  if (metas.length === 1 && !vuComme && !relire(metas[0]) && !orienter(metas[0])) return ouvrirArbre(metas[0].id, 'client');
   document.title = 'Vos livres · Vos Racines';
   $app.innerHTML = barre() + `<main class="page"><h1>Vos livres</h1>
     ${metas.length ? `<div class="grille">${metas.map(m => `<article class="livre"><h2>${esc(m.titre)}</h2><p class="st">${esc(m.sous_titre || '')}</p>
       <div class="chiffres"><div><b>${m.n_ancetres || 0}</b><span>ancêtres</span></div><div><b>${m.n_personnes || 0}</b><span>personnes</span></div><div><b>${m.generations || 0}</b><span>générations</span></div></div>
-      <div class="rangee"><button class="btn btn-1" data-o="${esc(m.id)}">Ouvrir l’arbre</button>${relire(m) ? `<button class="btn" data-relire="${esc(m.id)}">Relire le livre</button>` : ''}</div>
+      <div class="rangee"><button class="btn btn-1" data-o="${esc(m.id)}">Ouvrir l’arbre</button>${orienter(m) ? `<button class="btn btn-2" data-orienter="${esc(m.id)}">Orienter mon livre</button>` : ''}${relire(m) ? `<button class="btn" data-relire="${esc(m.id)}">Relire le livre</button>` : ''}</div>
       <p class="maj">Mis à jour le ${esc(dateFr(m.maj))}</p></article>`).join('')}</div>`
     : `<p>Votre arbre n’est pas encore en ligne. Nous vous écrirons dès qu’il le sera. Une question ? <a href="mailto:${CONTACT}">${CONTACT}</a></p>`}</main>`;
   brancherBarre();
   $app.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ouvrirArbre(b.dataset.o, 'client'));
   $app.querySelectorAll('[data-relire]').forEach(b => b.onclick = () => relecture(metas.find(m => m.id === b.dataset.relire), false));
+  $app.querySelectorAll('[data-orienter]').forEach(b => b.onclick = () => orientation(metas.find(m => m.id === b.dataset.orienter), false));
+}
+async function orientation(meta, admin) {
+  arbreActif = {id: meta.id, version: 'orientation'};
+  document.title = `Orienter ${meta.titre} · Vos Racines`;
+  $app.innerHTML = barre(meta.titre) + `<main class="page">${admin ? `<div class="bandeau-admin"><label><input type="checkbox" id="or-ouvert" ${meta.orientation ? 'checked' : ''}> Orientation ouverte au client</label> <span class="petit">Vous voyez ce que verra le client ; vos propres choix ne comptent pas.</span></div><div id="or-recus"></div>` : ''}<div id="orientation"></div></main>`;
+  brancherBarre();
+  if (admin) {
+    $app.querySelector('#or-ouvert').onchange = async e => { await S.ouvrirOrientationClient(meta.id, e.target.checked); meta.orientation = e.target.checked; };
+    const [cs, ds] = await Promise.all([S.tousChoix(meta.id).catch(() => []), S.mesDepots(meta.id, null).catch(() => [])]);
+    const recus = cs.filter(c => c.email !== U.email);
+    $app.querySelector('#or-recus').innerHTML = `<details class="or-recus" ${recus.length ? 'open' : ''}><summary>Choix reçus des clients (${recus.length}) · documents déposés (${ds.length})</summary>${recus.map(c => `<div class="note"><b>${esc(c.email)}</b> · style ${esc(c.theme || '?')} · couverture ${esc(c.couverture || '?')} · quatrième ${esc(c.quatrieme || '?')} · ${(c.images || []).length} image(s)${c.usage_prive ? ' (usage privé confirmé)' : ''}${c.ambiance ? `
+Ambiance : ${esc(c.ambiance)}` : ''}${c.creuser ? `
+À creuser : ${esc(c.creuser)}` : ''}</div>`).join('')}${ds.map(d => `<p class="petit">${esc(d.auteur)} : ${esc(d.nom)} (${esc(d.usage)})${d.complet ? '' : ' · incomplet'}</p>`).join('')}<p class="petit">HQ range les documents dans le dossier de la commande.</p></details>`;
+  }
+  ouvrirOrientation(document.getElementById('orientation'), meta, S, U, {admin, feuilleter: meta.livre ? () => relecture(meta, admin) : null});
 }
 async function relecture(meta, admin) {
   arbreActif = {id: meta.id, version: 'relecture'};
@@ -246,7 +284,7 @@ async function pageAdmin(onglet) {
       <table class="liste"><thead><tr><th>Arbre</th><th>Clients</th><th class="num">Ancêtres</th><th>Mis à jour</th><th></th></tr></thead><tbody>
       ${arbres.map(a => `<tr data-f="${esc((a.titre + ' ' + lecteurs(a.id).join(' ')).toLowerCase())}"><td><b>${esc(a.titre)}</b><br><span class="petit">${esc(a.sous_titre || '')}</span></td>
         <td>${lecteurs(a.id).map(esc).join('<br>') || '<span class="petit">aucun</span>'}</td><td class="num">${a.n_ancetres || 0}</td><td>${esc(a.maj ? new Date(a.maj).toLocaleDateString('fr-FR') : '')}</td>
-        <td><div class="rangee"><button class="btn btn-1" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button><button class="btn" data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.livre ? `<button class="btn" data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}</div></td></tr>`).join('')}
+        <td><div class="rangee"><button class="btn btn-1" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button><button class="btn" data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.proposition ? `<button class="btn" data-or="${esc(a.id)}">Orientation${a.orientation ? ' (ouverte)' : ''}</button>` : ''}${a.livre ? `<button class="btn" data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}</div></td></tr>`).join('')}
       </tbody></table>` : `<h1>Clients</h1>
       <form class="form-compte" id="fc"><b>Créer ou modifier un accès</b>
         <label class="etiq" for="fc-email">Adresse e-mail du client</label><input id="fc-email" type="email" required>
@@ -260,6 +298,7 @@ async function pageAdmin(onglet) {
   $app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => pageAdmin(b.dataset.t));
   $app.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ouvrirArbre(b.dataset.o, b.dataset.v));
   $app.querySelectorAll('[data-rl]').forEach(b => b.onclick = () => relecture(arbres.find(a => a.id === b.dataset.rl), true));
+  $app.querySelectorAll('[data-or]').forEach(b => b.onclick = () => orientation(arbres.find(a => a.id === b.dataset.or), true));
   const fl = $app.querySelector('#filtre');
   if (fl) fl.oninput = () => { const q = fl.value.toLowerCase(); $app.querySelectorAll('tr[data-f]').forEach(tr => tr.hidden = !tr.dataset.f.includes(q)); };
   const fc = $app.querySelector('#fc');
