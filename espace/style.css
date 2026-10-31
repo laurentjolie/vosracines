@@ -345,3 +345,37 @@ details.niveaux li{margin:6px 0}
 .or-pied{position:sticky;bottom:0;background:var(--bg);padding:12px 0 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
 .or-pied p{flex-basis:100%;margin:0}
 .or-recus{margin:0 0 16px}.or-recus .note{white-space:pre-wrap;margin:8px 0}
+
+/* 31/10 : passe mobile. Les actions de l'arbre dans un menu « Plus », légende bornée à l'écran */
+.ens-menu{display:none}
+.legende .corps{max-height:calc(100dvh - 200px);overflow-y:auto}
+@media (max-width:719px){
+  .ensemble{flex-direction:column;align-items:flex-end;flex-wrap:nowrap;top:124px}
+  .ensemble button{display:none}
+  .ensemble .ens-menu{display:block}
+  .ensemble.ouvert button{display:block;width:max-content}
+  .ensemble.ouvert [data-a=imprimer]{display:none}
+  .legende{max-width:calc(100vw - 96px)}
+  .legende .corps{max-height:calc(100dvh - 230px)}
+}
+@media (max-width:719px){.leg-plus{display:none}.legende{max-width:none;right:96px}}
+.recherche{z-index:12}
+@media (max-width:719px){
+  .or-grille{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .or-images{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .or-nom small{font-size:12px}
+  .or-pied{padding:8px 0 10px}
+  .or-pied p{display:none}
+  .or-etapes>li{padding:14px 12px 16px}
+  /* administration : les tableaux deviennent des fiches */
+  table.liste,table.liste tbody,table.liste tr,table.liste td{display:block;width:100%}
+  table.liste thead{display:none}
+  table.liste tr{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--paper)}
+  table.liste td{border:0;padding:3px 0;text-align:left}
+  table.liste td.num:before{content:"Ancêtres : ";color:var(--ink-soft)}
+  table.liste .rangee{flex-wrap:wrap;gap:8px}
+  .admin .rail{display:flex;gap:8px;overflow-x:auto}
+  .form-compte .cases{display:grid;gap:6px}
+}
+@media (max-width:719px){table.liste td .rangee{flex-wrap:wrap}.admin{display:block}.admin section{min-width:0}}
+@media (max-width:719px){table.liste td.num{text-align:left}.bandeau-admin{display:flex;flex-direction:column;align-items:flex-start;gap:4px}.bandeau-admin label{display:flex;gap:8px;align-items:center}}

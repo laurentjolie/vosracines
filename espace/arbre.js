@@ -75,13 +75,13 @@ export function creerArbre(racineEl, data, opt = {}) {
     <ul class="suggestions" id="sugg" role="listbox" hidden></ul>
   </div>
   <div class="fil" hidden></div>
-  <div class="flottant ensemble"><button data-a="entier">Ouvrir l’arbre en entier</button>${Object.values(P).filter(p => p.pep && !p.cache).length ? `<button data-a="pepites">✦ Les pépites (${Object.values(P).filter(p => p.pep && !p.cache).length})</button>` : ''}${(data.actes || []).length ? `<button data-a="actes">Les actes du livre (${data.actes.length})</button>` : ''}<button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
+  <div class="flottant ensemble"><button class="ens-menu" data-a="menu" aria-expanded="false">Plus ▾</button><button data-a="entier">Ouvrir l’arbre en entier</button>${Object.values(P).filter(p => p.pep && !p.cache).length ? `<button data-a="pepites">✦ Les pépites (${Object.values(P).filter(p => p.pep && !p.cache).length})</button>` : ''}${(data.actes || []).length ? `<button data-a="actes">Les actes du livre (${data.actes.length})</button>` : ''}<button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
   <div class="acte-vue" hidden role="dialog" aria-modal="true" aria-label="Acte"></div>
   <div class="flottant zoom">
     <button data-a="plus" aria-label="Agrandir">+</button><button data-a="moins" aria-label="Réduire">−</button>
     <button data-a="moi" class="moi" aria-label="Revenir à ${esc(egoNom)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg><span>Revenir à ${esc(egoNom)}</span></button>
   </div>
-  <div class="flottant legende"><button aria-expanded="true">Légende : couleurs, preuves et traits</button><div class="corps">
+  <div class="flottant legende"><button aria-expanded="true">Légende<span class="leg-plus"> : couleurs, preuves et traits</span></button><div class="corps">
     <ul>${['l1','l2','l3','l4'].map((l, i) => `<li><span class="sw" style="background:var(--${l})"></span>${esc(nomLignee(i))}</li>`).join('')}</ul>
     <ul>${['acte','piste','hypothese','famille'].map(n => `<li><span class="${PREUVE[n][1]}" style="width:16px;text-align:center">${PREUVE[n][0]}</span><span><b>${PREUVE[n][2]}</b> : ${PREUVE[n][3]}</span></li>`).join('')}
     <li><span style="width:16px;text-align:center">🔒</span><span>Personne vivante : seul le prénom est affiché</span></li></ul>
@@ -236,7 +236,10 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (a === 'moi') { focus = ego; ouverts = {}; dessiner(); premiereVue(); }
   });
   racineEl.querySelector('.ensemble').addEventListener('click', e => {
-    const a = e.target.closest('button')?.dataset.a; if (a === 'tout') toutVoir(); if (a === 'imprimer') print(); if (a === 'actes') listeActes(); if (a === 'pepites') listePepites();
+    const a = e.target.closest('button')?.dataset.a; const ens = racineEl.querySelector('.ensemble');
+    if (a === 'menu') { const o = ens.classList.toggle('ouvert'); e.target.closest('button').setAttribute('aria-expanded', String(o)); return; }
+    ens.classList.remove('ouvert'); racineEl.querySelector('.ens-menu')?.setAttribute('aria-expanded', 'false');
+    if (a === 'tout') toutVoir(); if (a === 'imprimer') print(); if (a === 'actes') listeActes(); if (a === 'pepites') listePepites();
     if (a === 'entier') { tout = !tout; if (tout) focus = ego; e.target.closest('button').textContent = tout ? 'Revenir à la vue simple' : 'Ouvrir l’arbre en entier'; dessiner(); if (tout) toutVoir(); else premiereVue(); }
   });
   const leg = racineEl.querySelector('.legende');
