@@ -235,7 +235,7 @@ async function accueil() {
 async function orientation(meta, admin) {
   arbreActif = {id: meta.id, version: 'orientation'};
   document.title = `Orienter ${meta.titre} · Vos Racines`;
-  $app.innerHTML = barre(meta.titre) + `<main class="page">${admin ? `<div class="bandeau-admin"><label><input type="checkbox" id="or-ouvert" ${meta.orientation ? 'checked' : ''}> Orientation ouverte au client</label> <span class="petit">Vous voyez ce que verra le client ; vos propres choix ne comptent pas.</span></div><div id="or-recus"></div>` : ''}<div id="orientation"></div></main>`;
+  $app.innerHTML = barre(meta.titre) + `<main class="page">${admin ? `<div class="bandeau-admin statique"><label><input type="checkbox" id="or-ouvert" ${meta.orientation ? 'checked' : ''}> Orientation ouverte au client</label> <span class="petit">Vous voyez ce que verra le client ; vos propres choix ne comptent pas.</span></div><div id="or-recus"></div>` : ''}<div id="orientation"></div></main>`;
   brancherBarre();
   if (admin) {
     $app.querySelector('#or-ouvert').onchange = async e => { await S.ouvrirOrientationClient(meta.id, e.target.checked); meta.orientation = e.target.checked; };

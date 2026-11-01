@@ -379,3 +379,6 @@ details.niveaux li{margin:6px 0}
 }
 @media (max-width:719px){table.liste td .rangee{flex-wrap:wrap}.admin{display:block}.admin section{min-width:0}}
 @media (max-width:719px){table.liste td.num{text-align:left}.bandeau-admin{display:flex;flex-direction:column;align-items:flex-start;gap:4px}.bandeau-admin label{display:flex;gap:8px;align-items:center}}
+/* 01/11 : le bandeau d'orientation (admin) suit la page au lieu de couvrir son haut ; en « voir comme ce client », la page descend sous le bandeau */
+.bandeau-admin.statique{position:static;border-radius:10px;margin:0 0 14px;flex-wrap:wrap}
+body:has(.bandeau-admin:not(.statique)) .page{padding-top:124px}
