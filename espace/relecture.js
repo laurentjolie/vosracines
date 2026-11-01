@@ -17,6 +17,7 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   el.innerHTML = `<div class="relecture">
     <div class="rl-tete"><div><h1>Relire le livre</h1><p class="petit">${esc(meta.titre)} · version ${esc((meta.livre || {}).version || '')} · ${N} pages</p></div>
       <p class="rl-aide">Sélectionnez un passage ou touchez le numéro d’une image pour le commenter. Le texte se copie et se colle.</p>
+      <div class="rl-zoom" role="group" aria-label="Taille des pages"><button type="button" data-z="-" aria-label="Rapetisser">−</button><span class="rl-z">100 %</span><button type="button" data-z="+" aria-label="Agrandir">+</button><button type="button" data-z="1">Ajuster</button></div>
       ${admin ? `<label class="rl-ouvrir"><input type="checkbox" ${meta.relecture ? 'checked' : ''}> Relecture ouverte au client</label>` : ''}</div>
     <div class="rl-corps">
       <div class="rl-pages">${PL.map((pl, k) => `<section class="planche" data-pl="${k}" aria-label="${libPlanche(pl)}"><h2 class="rl-lib">${libPlanche(pl)}</h2><div class="pl-pages">${pl.map(n => n ? `<div class="pg" data-n="${n}" style="aspect-ratio:148/210"><span class="pg-num">${n}</span></div>` : '<div class="pg vide" aria-hidden="true"></div>').join('')}</div></section>`).join('')}</div>
@@ -51,6 +52,19 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
       return `<span style="left:${x * 100}%;top:${y * 100}%;font-size:${fs}cqw;transform:scaleX(${sx.toFixed(3)})">${esc(t)}</span>`;
     }).join(' ')}</div>${(p.im || []).map(([x, y, w, h, nom]) => `<button class="pg-img" data-img="${esc(nom)}" style="left:${x * 100}%;top:${y * 100}%;width:${w * 100}%;height:${h * 100}%" aria-label="Image ${esc(nom)} : la commenter"><span>Image ${esc(nom)}</span></button>`).join('')}`);
   }
+
+  // ---------- zoom (01/11, Laurent) : boutons, Ctrl ou ⌘ + molette, touches + et - ; le texte sélectionnable suit (unités cqw)
+  let z = 1;
+  function zoomer(nz, cx) {
+    nz = Math.max(0.5, Math.min(3, Math.round(nz * 4) / 4)); if (nz === z) return;
+    const r = pagesEl.getBoundingClientRect(), fx = (pagesEl.scrollLeft + (cx ?? r.width / 2)) / pagesEl.scrollWidth, fy = (pagesEl.scrollTop + r.height / 2) / pagesEl.scrollHeight;
+    z = nz; pagesEl.style.setProperty('--z', z); el.querySelector('.rl-z').textContent = Math.round(z * 100) + ' %';
+    pagesEl.classList.toggle('zoome', z > 1);
+    pagesEl.scrollLeft = fx * pagesEl.scrollWidth - (cx ?? r.width / 2); pagesEl.scrollTop = fy * pagesEl.scrollHeight - r.height / 2;
+  }
+  el.querySelector('.rl-zoom').addEventListener('click', e => { const b = e.target.closest('[data-z]'); if (!b) return; zoomer(b.dataset.z === '+' ? z + 0.25 : b.dataset.z === '-' ? z - 0.25 : 1); });
+  pagesEl.addEventListener('wheel', e => { if (!(e.ctrlKey || e.metaKey)) return; e.preventDefault(); zoomer(z * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX - pagesEl.getBoundingClientRect().left); }, {passive: false});
+  addEventListener('keydown', e => { if (e.target.matches('textarea, input')) return; if (e.key === '+' || e.key === '=') zoomer(z + 0.25); if (e.key === '-') zoomer(z - 0.25); });
 
   // ---------- planche courante
   const vis = new Map();

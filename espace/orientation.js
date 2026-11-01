@@ -20,13 +20,18 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
   el.innerHTML = '<div class="chargement">Chargement…</div>';
   const [prop, choix0, depots0] = await Promise.all([S.proposition(meta.id).catch(() => null), S.choix(meta.id, U.email).catch(() => null), S.mesDepots(meta.id, U.email).catch(() => [])]);
   const P = prop || {themes: [], couvertures: [], quatriemes: [], images: []};
-  let choix = {titre: '', theme: '', couverture: '', quatrieme: '', images: [], ambiance: '', creuser: '', usage_prive: false, ...(choix0 || {})};
+  let choix = {couverture_note: '', quatrieme_note: '', titre: '', theme: '', couverture: '', quatrieme: '', images: [], ambiance: '', creuser: '', usage_prive: false, ...(choix0 || {})};
   P.titres = P.titres || [];
   const RECO = '<span class="or-reco">Notre recommandation</span>';
   let depots = depots0 || [];
   const img = async nom => { try { return await S.image(meta.id, nom); } catch (e) { return null; } };
 
-  const carteChoix = (groupe, x, sel) => `<label class="or-carte ${sel ? 'choisie' : ''}"><input type="radio" name="${groupe}" value="${esc(x.id)}" ${sel ? 'checked' : ''}>
+  const carteAutre = (groupe, x, sel) => { const champ = groupe === 'couverture' ? 'couverture_note' : 'quatrieme_note'; const d = depots.filter(z => z.usage === groupe);
+    return `<label class="or-carte autre ${sel ? 'choisie' : ''}"><input type="radio" name="${groupe}" value="${esc(x.id)}" ${sel ? 'checked' : ''}>
+      <span class="or-nom"><b>${esc(x.titre)}</b><small>${esc(x.desc || '')}</small>
+      <textarea data-note="${champ}" rows="3" placeholder="Votre idée…">${esc(choix[champ] || '')}</textarea>
+      <button type="button" class="btn" data-deposer="${groupe}">${d.length ? 'Envoyer un autre document' : 'Envoyer un document'}</button>${d.length ? `<small>Reçu : ${esc(d[d.length - 1].nom)}</small>` : ''}</span></label>`; };
+  const carteChoix = (groupe, x, sel) => x.autre ? carteAutre(groupe, x, sel) : `<label class="or-carte ${sel ? 'choisie' : ''}"><input type="radio" name="${groupe}" value="${esc(x.id)}" ${sel ? 'checked' : ''}>
     <span class="or-vign" data-img="${esc(x.img || (x.apercus || [])[0] || '')}"></span>${x.reco ? RECO : ''}<span class="or-nom"><b>${esc(x.nom || x.titre)}</b>${x.desc ? `<small>${esc(x.desc)}</small>` : ''}</span></label>`;
   const persoCarte = (groupe) => {
     const d = depots.filter(z => z.usage === groupe); const id = d.length ? 'perso:' + d[d.length - 1].id : '';
@@ -38,17 +43,17 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
     el.innerHTML = `<div class="orientation"><div class="or-int">
       <h1>Orienter votre livre</h1>
       <p class="or-chapo">Voici le premier jet de <b>${esc(meta.titre)}</b>. Avant la version finale, dites-nous l’allure et l’ambiance que vous voulez. Inutile de relire mot à mot : la relecture fine viendra avec le bon à tirer.</p>
-      ${meta.livre ? `<p><button class="btn" data-feuilleter>Feuilleter le premier jet</button></p>` : ''}
+      ${meta.livre ? `<div class="or-feuilleter"><div><b>Feuilletez le premier jet et commentez-le</b><p>Toutes les pages du livre, comme ouvert devant vous. Sélectionnez une phrase ou touchez une image, et laissez votre remarque juste à côté.</p></div><button class="btn btn-1" data-feuilleter>Feuilleter et commenter</button></div>` : ''}
       <ol class="or-etapes">
       <li><h2>Le titre</h2><p class="aide">Quelques propositions, ou le titre de votre choix.</p>
         <div class="or-titres">${P.titres.map(t => `<label class="or-titre ${choix.titre === t.id ? 'choisie' : ''}"><input type="radio" name="titre" value="${esc(t.id)}" ${choix.titre === t.id ? 'checked' : ''}>${t.reco ? RECO : ''}<b>${esc(t.titre)}</b>${t.sous_titre ? `<small>${esc(t.sous_titre)}</small>` : ''}</label>`).join('')}
           <label class="or-titre libre ${choix.titre.startsWith('libre:') ? 'choisie' : ''}"><input type="radio" name="titre" value="libre" ${choix.titre.startsWith('libre:') ? 'checked' : ''}><b>Votre titre</b><input type="text" id="or-titre-libre" maxlength="120" placeholder="Écrivez le titre que vous aimeriez" value="${esc(choix.titre.startsWith('libre:') ? choix.titre.slice(6) : '')}"></label></div></li>
-      <li><h2>Le style du livre</h2><p class="aide">Trois habillages, le même texte.</p>
+      <li><h2>Le style du livre</h2><p class="aide">${['', 'Un habillage', 'Deux habillages', 'Trois habillages', 'Quatre habillages', 'Cinq habillages'][P.themes.length] || P.themes.length + ' habillages'}, le même texte.</p>
         <div class="or-grille">${P.themes.map(t => carteChoix('theme', t, choix.theme === t.id)).join('') || '<p class="petit">Les styles arrivent bientôt.</p>'}</div></li>
-      <li><h2>La couverture</h2><p class="aide">Une image du livre, ou une photo à vous (un portrait de famille, une maison, un village).</p>
-        <div class="or-grille">${P.couvertures.map(t => carteChoix('couverture', t, choix.couverture === t.id)).join('')}${persoCarte('couverture')}</div></li>
+      <li><h2>La couverture</h2><p class="aide">Un type de couverture ; « Autre chose » si vous avez votre idée ou votre document.</p>
+        <div class="or-grille">${P.couvertures.map(t => carteChoix('couverture', t, choix.couverture === t.id)).join('')}</div></li>
       <li><h2>La quatrième de couverture</h2><p class="aide">L’image du dos du livre.</p>
-        <div class="or-grille">${P.quatriemes.map(t => carteChoix('quatrieme', t, choix.quatrieme === t.id)).join('')}${persoCarte('quatrieme')}</div></li>
+        <div class="or-grille">${P.quatriemes.map(t => carteChoix('quatrieme', t, choix.quatrieme === t.id)).join('')}</div></li>
       <li><h2>Vos documents de famille</h2><p class="aide">Photos, livret de famille, lettres, faire-part, papiers militaires : tout ce qui peut nourrir le livre. Pour qu’un document puisse être reproduit dans le livre, envoyez-en un scan de bonne qualité (300 dpi ou plus), pas une photo prise au téléphone.</p>
         <div class="or-depot"><button type="button" class="btn btn-1" data-deposer="document">Ajouter des documents</button><span class="note-ok" id="or-etat" role="status"></span></div>
         <ul class="or-depots">${depots.map(d => `<li><span>${esc(d.nom)}</span><small>${esc({couverture: 'pour la couverture', quatrieme: 'pour la quatrième', document: 'document', photo: 'photo'}[d.usage] || '')}${d.complet ? '' : ' · envoi incomplet'}</small><button type="button" class="btn-lien" data-suppr="${esc(d.id)}">Retirer</button></li>`).join('')}</ul></li>
@@ -82,7 +87,8 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
     el.querySelector('#or-prive').onchange = e => { choix.usage_prive = e.target.checked; sauver(); };
     el.querySelector('[data-ajurl]').onclick = () => { const u = el.querySelector('#or-url').value.trim(); if (!/^https?:\/\//.test(u)) return el.querySelector('#or-url').focus(); choix.images = [...new Set([...choix.images, u])]; sauver(true); };
     el.querySelectorAll('[data-rurl]').forEach(b => b.onclick = () => { choix.images = choix.images.filter(i => i !== b.dataset.rurl); sauver(true); });
-    el.querySelectorAll('textarea').forEach(t => t.oninput = () => { choix[t.id === 'or-amb' ? 'ambiance' : 'creuser'] = t.value; sauverPlusTard(); });
+    el.querySelectorAll('textarea').forEach(t => t.oninput = () => { choix[t.dataset.note || (t.id === 'or-amb' ? 'ambiance' : 'creuser')] = t.value; sauverPlusTard(); });
+    el.querySelectorAll('.or-carte.autre textarea, .or-carte.autre button').forEach(x => x.addEventListener('click', e => { const r = x.closest('label').querySelector('input[type=radio]'); if (!r.checked) { r.checked = true; r.dispatchEvent(new Event('change')); } }));
     el.querySelector('[data-enreg]').onclick = () => sauver(false, true);
     const fic = el.querySelector('#or-fichier');
     el.querySelectorAll('[data-deposer]').forEach(b => b.onclick = e => { e.preventDefault(); usageDepot = b.dataset.deposer; fic.multiple = usageDepot === 'document'; fic.accept = usageDepot === 'document' ? 'image/*,application/pdf' : 'image/*'; fic.click(); });
@@ -97,7 +103,7 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
     clearTimeout(minuteur);
     const ok = el.querySelector('#or-ok');
     try {
-      await S.enregistrerChoix(meta.id, U.email, {titre: (choix.titre || '').slice(0, 200), theme: choix.theme || '', couverture: choix.couverture || '', quatrieme: choix.quatrieme || '', images: choix.images.slice(0, 59), ambiance: (choix.ambiance || '').slice(0, 7900), creuser: (choix.creuser || '').slice(0, 7900), usage_prive: !!choix.usage_prive});
+      await S.enregistrerChoix(meta.id, U.email, {couverture_note: (choix.couverture_note || '').slice(0, 1900), quatrieme_note: (choix.quatrieme_note || '').slice(0, 1900), titre: (choix.titre || '').slice(0, 200), theme: choix.theme || '', couverture: choix.couverture || '', quatrieme: choix.quatrieme || '', images: choix.images.slice(0, 59), ambiance: (choix.ambiance || '').slice(0, 7900), creuser: (choix.creuser || '').slice(0, 7900), usage_prive: !!choix.usage_prive});
       if (ok) { ok.textContent = signaler ? 'Vos choix sont enregistrés. Merci !' : 'Enregistré'; setTimeout(() => { if (ok) ok.textContent = ''; }, 2500); }
     } catch (e) { console.error(e); if (ok) ok.textContent = 'L’enregistrement n’a pas marché. Réessayez dans un instant.'; }
     if (redessiner) rendre();
@@ -116,7 +122,7 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
         const nom = f.size >= 20 * MO && f.type.startsWith('image/') ? f.name.replace(/\.\w+$/, '') + '.jpg' : f.name;
         const id = await S.deposer(meta.id, {nom: nom.slice(0, 190), type: f.size >= 20 * MO && f.type.startsWith('image/') ? 'image/jpeg' : f.type, taille: data.length, usage}, parts);
         depots.push({id, nom, usage, complet: true});
-        if (usage !== 'document') choix[usage] = 'perso:' + id;
+        if (usage !== 'document') choix[usage] = usage === 'couverture' ? 'autre' : 'q-autre';
       } catch (e) { console.error(e); etat.textContent = `${f.name} : l’envoi n’a pas marché.`; return; }
     }
     if (usage !== 'document') await sauver();

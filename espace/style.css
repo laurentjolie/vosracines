@@ -396,3 +396,20 @@ body:has(.bandeau-admin:not(.statique)) .page{padding-top:124px}
 .or-carte{position:relative}
 .or-carte .or-reco{position:absolute;top:8px;left:8px;margin:0;box-shadow:var(--shadow)}
 @media (max-width:719px){.or-titres{grid-template-columns:1fr}}
+
+/* 01/11 : couverture « autre chose », bloc « feuilleter et commenter » bien visible */
+.or-carte.autre{cursor:default}
+.or-carte.autre .or-nom{gap:8px;padding:12px}
+.or-carte.autre textarea{width:100%;font:15px var(--f-ui);border:1.5px solid var(--line-strong);border-radius:8px;padding:8px;resize:vertical}
+.or-feuilleter{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;background:var(--band);border:1.5px solid var(--accent-2);border-radius:14px;padding:16px 18px;margin:8px 0 6px}
+.or-feuilleter b{font-size:19px}
+.or-feuilleter p{margin:4px 0 0;max-width:560px;color:var(--ink-soft)}
+
+/* 01/11 : zoom des pages dans la relecture */
+.rl-zoom{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--bg)}
+.rl-zoom button{min-width:40px;min-height:40px;border:0;border-radius:8px;background:var(--paper);font:700 18px var(--f-ui);cursor:pointer}
+.rl-zoom button[data-z="1"]{font-size:14px;padding:0 10px}
+.rl-zoom .rl-z{min-width:56px;text-align:center;font-variant-numeric:tabular-nums;font-size:14px}
+.rl-pages .planche{width:calc(min(1100px, 100%) * var(--z, 1));max-width:none}
+.rl-pages.zoome .planche{margin-left:0;margin-right:0}
+@media (max-width:900px){.rl-zoom button{min-width:44px;min-height:44px}.rl-tete{gap:6px}}
