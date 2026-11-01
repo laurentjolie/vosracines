@@ -20,12 +20,14 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
   el.innerHTML = '<div class="chargement">Chargement…</div>';
   const [prop, choix0, depots0] = await Promise.all([S.proposition(meta.id).catch(() => null), S.choix(meta.id, U.email).catch(() => null), S.mesDepots(meta.id, U.email).catch(() => [])]);
   const P = prop || {themes: [], couvertures: [], quatriemes: [], images: []};
-  let choix = {theme: '', couverture: '', quatrieme: '', images: [], ambiance: '', creuser: '', usage_prive: false, ...(choix0 || {})};
+  let choix = {titre: '', theme: '', couverture: '', quatrieme: '', images: [], ambiance: '', creuser: '', usage_prive: false, ...(choix0 || {})};
+  P.titres = P.titres || [];
+  const RECO = '<span class="or-reco">Notre recommandation</span>';
   let depots = depots0 || [];
   const img = async nom => { try { return await S.image(meta.id, nom); } catch (e) { return null; } };
 
   const carteChoix = (groupe, x, sel) => `<label class="or-carte ${sel ? 'choisie' : ''}"><input type="radio" name="${groupe}" value="${esc(x.id)}" ${sel ? 'checked' : ''}>
-    <span class="or-vign" data-img="${esc(x.img || (x.apercus || [])[0] || '')}"></span><span class="or-nom"><b>${esc(x.nom || x.titre)}</b>${x.desc ? `<small>${esc(x.desc)}</small>` : ''}</span></label>`;
+    <span class="or-vign" data-img="${esc(x.img || (x.apercus || [])[0] || '')}"></span>${x.reco ? RECO : ''}<span class="or-nom"><b>${esc(x.nom || x.titre)}</b>${x.desc ? `<small>${esc(x.desc)}</small>` : ''}</span></label>`;
   const persoCarte = (groupe) => {
     const d = depots.filter(z => z.usage === groupe); const id = d.length ? 'perso:' + d[d.length - 1].id : '';
     return `<label class="or-carte perso ${choix[groupe] && choix[groupe].startsWith('perso:') ? 'choisie' : ''}"><input type="radio" name="${groupe}" value="${esc(id)}" ${choix[groupe] && choix[groupe].startsWith('perso:') ? 'checked' : ''} ${id ? '' : 'disabled'}>
@@ -38,13 +40,16 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
       <p class="or-chapo">Voici le premier jet de <b>${esc(meta.titre)}</b>. Avant la version finale, dites-nous l’allure et l’ambiance que vous voulez. Inutile de relire mot à mot : la relecture fine viendra avec le bon à tirer.</p>
       ${meta.livre ? `<p><button class="btn" data-feuilleter>Feuilleter le premier jet</button></p>` : ''}
       <ol class="or-etapes">
+      <li><h2>Le titre</h2><p class="aide">Quelques propositions, ou le titre de votre choix.</p>
+        <div class="or-titres">${P.titres.map(t => `<label class="or-titre ${choix.titre === t.id ? 'choisie' : ''}"><input type="radio" name="titre" value="${esc(t.id)}" ${choix.titre === t.id ? 'checked' : ''}>${t.reco ? RECO : ''}<b>${esc(t.titre)}</b>${t.sous_titre ? `<small>${esc(t.sous_titre)}</small>` : ''}</label>`).join('')}
+          <label class="or-titre libre ${choix.titre.startsWith('libre:') ? 'choisie' : ''}"><input type="radio" name="titre" value="libre" ${choix.titre.startsWith('libre:') ? 'checked' : ''}><b>Votre titre</b><input type="text" id="or-titre-libre" maxlength="120" placeholder="Écrivez le titre que vous aimeriez" value="${esc(choix.titre.startsWith('libre:') ? choix.titre.slice(6) : '')}"></label></div></li>
       <li><h2>Le style du livre</h2><p class="aide">Trois habillages, le même texte.</p>
         <div class="or-grille">${P.themes.map(t => carteChoix('theme', t, choix.theme === t.id)).join('') || '<p class="petit">Les styles arrivent bientôt.</p>'}</div></li>
       <li><h2>La couverture</h2><p class="aide">Une image du livre, ou une photo à vous (un portrait de famille, une maison, un village).</p>
         <div class="or-grille">${P.couvertures.map(t => carteChoix('couverture', t, choix.couverture === t.id)).join('')}${persoCarte('couverture')}</div></li>
       <li><h2>La quatrième de couverture</h2><p class="aide">L’image du dos du livre.</p>
         <div class="or-grille">${P.quatriemes.map(t => carteChoix('quatrieme', t, choix.quatrieme === t.id)).join('')}${persoCarte('quatrieme')}</div></li>
-      <li><h2>Vos documents de famille</h2><p class="aide">Photos, livret de famille, lettres, faire-part, papiers militaires : tout ce qui peut nourrir le livre. Une photo prise au téléphone suffit.</p>
+      <li><h2>Vos documents de famille</h2><p class="aide">Photos, livret de famille, lettres, faire-part, papiers militaires : tout ce qui peut nourrir le livre. Pour qu’un document puisse être reproduit dans le livre, envoyez-en un scan de bonne qualité (300 dpi ou plus), pas une photo prise au téléphone.</p>
         <div class="or-depot"><button type="button" class="btn btn-1" data-deposer="document">Ajouter des documents</button><span class="note-ok" id="or-etat" role="status"></span></div>
         <ul class="or-depots">${depots.map(d => `<li><span>${esc(d.nom)}</span><small>${esc({couverture: 'pour la couverture', quatrieme: 'pour la quatrième', document: 'document', photo: 'photo'}[d.usage] || '')}${d.complet ? '' : ' · envoi incomplet'}</small><button type="button" class="btn-lien" data-suppr="${esc(d.id)}">Retirer</button></li>`).join('')}</ul></li>
       <li><h2>Des images pour illustrer</h2><p class="aide">Nous avons repéré ces images (cartes postales, lieux, époques). Cochez celles que vous voulez voir dans votre livre, ou ajoutez le lien d’une image trouvée ailleurs.</p>
@@ -68,7 +73,11 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
 
   let usageDepot = 'document';
   function brancher() {
-    el.querySelectorAll('input[type=radio]').forEach(r => r.onchange = () => { choix[r.name] = r.value; el.querySelectorAll(`input[name=${r.name}]`).forEach(x => x.closest('.or-carte').classList.toggle('choisie', x.checked)); sauver(); });
+    el.querySelectorAll('input[type=radio]').forEach(r => r.onchange = () => {
+      choix[r.name] = r.name === 'titre' && r.value === 'libre' ? 'libre:' + el.querySelector('#or-titre-libre').value.trim() : r.value;
+      el.querySelectorAll(`input[name=${r.name}]`).forEach(x => x.closest('.or-carte, .or-titre').classList.toggle('choisie', x.checked)); sauver(); });
+    const tl = el.querySelector('#or-titre-libre');
+    tl.oninput = () => { const r = el.querySelector('input[name=titre][value=libre]'); r.checked = true; choix.titre = 'libre:' + tl.value.trim(); el.querySelectorAll('input[name=titre]').forEach(x => x.closest('.or-titre').classList.toggle('choisie', x.checked)); sauverPlusTard(); };
     el.querySelectorAll('.or-images input').forEach(c => c.onchange = () => { choix.images = c.checked ? [...new Set([...choix.images, c.value])] : choix.images.filter(i => i !== c.value); sauver(); });
     el.querySelector('#or-prive').onchange = e => { choix.usage_prive = e.target.checked; sauver(); };
     el.querySelector('[data-ajurl]').onclick = () => { const u = el.querySelector('#or-url').value.trim(); if (!/^https?:\/\//.test(u)) return el.querySelector('#or-url').focus(); choix.images = [...new Set([...choix.images, u])]; sauver(true); };
@@ -88,7 +97,7 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
     clearTimeout(minuteur);
     const ok = el.querySelector('#or-ok');
     try {
-      await S.enregistrerChoix(meta.id, U.email, {theme: choix.theme || '', couverture: choix.couverture || '', quatrieme: choix.quatrieme || '', images: choix.images.slice(0, 59), ambiance: (choix.ambiance || '').slice(0, 7900), creuser: (choix.creuser || '').slice(0, 7900), usage_prive: !!choix.usage_prive});
+      await S.enregistrerChoix(meta.id, U.email, {titre: (choix.titre || '').slice(0, 200), theme: choix.theme || '', couverture: choix.couverture || '', quatrieme: choix.quatrieme || '', images: choix.images.slice(0, 59), ambiance: (choix.ambiance || '').slice(0, 7900), creuser: (choix.creuser || '').slice(0, 7900), usage_prive: !!choix.usage_prive});
       if (ok) { ok.textContent = signaler ? 'Vos choix sont enregistrés. Merci !' : 'Enregistré'; setTimeout(() => { if (ok) ok.textContent = ''; }, 2500); }
     } catch (e) { console.error(e); if (ok) ok.textContent = 'L’enregistrement n’a pas marché. Réessayez dans un instant.'; }
     if (redessiner) rendre();
@@ -99,12 +108,13 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
     for (const [i, f] of files.entries()) {
       etat.textContent = `Envoi de ${f.name} (${i + 1}/${files.length})…`;
       try {
-        const data = f.type.startsWith('image/') ? await enJpeg(f) : f.type === 'application/pdf' && f.size < 20 * MO ? await enDataURL(f) : null;
+        // 01/11 : les documents doivent pouvoir être imprimés : on garde le fichier d'origine jusqu'à 20 Mo, sans le recompresser
+        const data = f.size < 20 * MO && (f.type.startsWith('image/') || f.type === 'application/pdf') ? await enDataURL(f) : f.type.startsWith('image/') ? await enJpeg(f, 5000) : null;
         if (!data) { etat.textContent = `${f.name} : format non pris en charge (photo ou PDF de moins de 20 Mo).`; continue; }
         const parts = []; for (let k = 0; k < data.length; k += MORCEAU) parts.push(data.slice(k, k + MORCEAU));
         if (parts.length > MAX_MORCEAUX) { etat.textContent = `${f.name} est trop lourd.`; continue; }
-        const nom = f.type.startsWith('image/') ? f.name.replace(/\.\w+$/, '') + '.jpg' : f.name;
-        const id = await S.deposer(meta.id, {nom: nom.slice(0, 190), type: f.type.startsWith('image/') ? 'image/jpeg' : f.type, taille: data.length, usage}, parts);
+        const nom = f.size >= 20 * MO && f.type.startsWith('image/') ? f.name.replace(/\.\w+$/, '') + '.jpg' : f.name;
+        const id = await S.deposer(meta.id, {nom: nom.slice(0, 190), type: f.size >= 20 * MO && f.type.startsWith('image/') ? 'image/jpeg' : f.type, taille: data.length, usage}, parts);
         depots.push({id, nom, usage, complet: true});
         if (usage !== 'document') choix[usage] = 'perso:' + id;
       } catch (e) { console.error(e); etat.textContent = `${f.name} : l’envoi n’a pas marché.`; return; }

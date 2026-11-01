@@ -382,3 +382,17 @@ details.niveaux li{margin:6px 0}
 /* 01/11 : le bandeau d'orientation (admin) suit la page au lieu de couvrir son haut ; en « voir comme ce client », la page descend sous le bandeau */
 .bandeau-admin.statique{position:static;border-radius:10px;margin:0 0 14px;flex-wrap:wrap}
 body:has(.bandeau-admin:not(.statique)) .page{padding-top:124px}
+
+/* 01/11 : titre au choix, et notre recommandation mise en avant */
+.or-titres{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.or-titre{display:flex;flex-direction:column;gap:4px;border:2px solid var(--line);border-radius:12px;padding:14px 14px 12px;background:#fff;cursor:pointer;position:relative}
+.or-titre input[type=radio]{position:absolute;opacity:0}
+.or-titre b{font-family:var(--f-display);font-size:19px;font-weight:600;line-height:1.25}
+.or-titre small{color:var(--ink-soft);font-size:13px}
+.or-titre:hover{border-color:var(--accent-2)}
+.or-titre.choisie{border-color:var(--accent);box-shadow:0 0 0 3px rgba(168,68,30,.18)}
+.or-titre input[type=text]{min-height:42px;font:16px var(--f-ui);border:1.5px solid var(--line-strong);border-radius:8px;padding:0 10px;margin-top:4px}
+.or-reco{align-self:flex-start;background:var(--accent-2);color:#2E2117;font:700 12px var(--f-ui);padding:2px 9px;border-radius:10px;margin:0 0 4px}
+.or-carte{position:relative}
+.or-carte .or-reco{position:absolute;top:8px;left:8px;margin:0;box-shadow:var(--shadow)}
+@media (max-width:719px){.or-titres{grid-template-columns:1fr}}
