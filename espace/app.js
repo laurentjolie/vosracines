@@ -4,6 +4,7 @@ import {FIREBASE, EMULATEURS, CONTACT} from './config.js';
 import {creerArbre, nomComplet} from './arbre.js';
 import {ouvrirRelecture} from './relecture.js';
 import {ouvrirOrientation} from './orientation.js';
+import {ouvrirSuivi} from './suivi.js';
 
 const $app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -72,6 +73,8 @@ async function sourceFirebase() {
       await fb.updateDoc(ref, {complet: true}); return ref.id;
     },
     supprimerDepot: (id, did) => fb.deleteDoc(fb.doc(db, 'arbres', id, 'depots', did)),
+    // 02/11 : suivi de l'archiviste (administrateur)
+    suivis: async () => (await fb.getDocs(fb.collection(db, 'suivi'))).docs.map(d => JSON.parse(d.data().d)),
   };
 }
 let devRetours = [], devChoix = null, devDepots = [];
@@ -105,6 +108,7 @@ async function sourceDev() {   // données locales pour essayer l'interface sans
     mesDepots: async () => [...devDepots],
     deposer: async (id, m, parts) => { const x = {...m, id: 'd' + Date.now(), complet: true}; devDepots.push(x); return x.id; },
     supprimerDepot: async (id, did) => { devDepots = devDepots.filter(x => x.id !== did); },
+    suivis: async () => { try { return await (await fetch('dev/suivi.json')).json(); } catch (e) { return []; } },
   };
 }
 
@@ -212,7 +216,7 @@ function brancherBarre() {
   if (sel) sel.onchange = () => ouvrirArbre(sel.value, sel.selectedOptions[0].dataset.v);
 }
 async function accueil() {
-  if (U.admin && !vuComme) { U.prenom = U.prenom || 'Laurent'; return pageAdmin('arbres'); }
+  if (U.admin && !vuComme) { U.prenom = U.prenom || 'Laurent'; return pageAdmin('clients'); }
   const email = vuComme || U.email;
   const c = await S.compte(email);
   if (!vuComme) U.prenom = c.prenom || '';
@@ -273,34 +277,60 @@ async function ouvrirArbre(id, version) {
 }
 
 // ---------------------------------------------------------------- administration
+// 02/11/2026 (Laurent) : l'administration part des clients, plus des arbres. Les adresses Gmail qui ne diffèrent
+// que par des points (lu.ouvry et luouvry) sont la même boîte : une seule ligne.
+const cleEmail = e => {
+  let [l, d] = String(e || '').trim().toLowerCase().split('@');
+  if (!d) return l || '';
+  if (d === 'googlemail.com') d = 'gmail.com';
+  if (d === 'gmail.com') l = l.split('+')[0].replace(/\./g, '');
+  return l + '@' + d;
+};
 async function pageAdmin(onglet) {
+  if (onglet === 'arbres') onglet = 'clients';
   document.title = 'Administration · Vos Racines';
-  const [arbres, comptes] = await Promise.all([S.tousArbres(), S.comptes()]);
-  const lecteurs = id => comptes.filter(c => (c.arbres || []).includes(id)).map(c => c.email);
+  const [arbres, comptes, suivis] = await Promise.all([S.tousArbres(), S.comptes(), S.suivis ? S.suivis().catch(() => []) : []]);
+  // un client = toutes ses adresses (comptes de l'espace, adresses des commandes), regroupées par boîte réelle
+  const G = new Map();
+  const groupe = e => { const k = cleEmail(e); if (!G.has(k)) G.set(k, {cle: k, emails: new Set(), arbres: new Set(), noms: new Set(), commandes: []}); return G.get(k); };
+  for (const c of comptes) { const g = groupe(c.email); g.emails.add(c.email); (c.arbres || []).forEach(a => g.arbres.add(a)); if (c.prenom) g.noms.add(String(c.prenom).trim()); }
+  for (const s of suivis) {
+    const em = (s.emails || [])[0]; if (!em) continue;
+    const g = groupe(em); (s.emails || []).forEach(e => { if (cleEmail(e) === g.cle) g.emails.add(e); });
+    g.commandes.push(s); if (s.client) g.noms.add(String(s.client).trim()); (s.arbres || []).forEach(a => g.arbres.add(a));
+  }
+  for (const a of arbres) for (const e of a.lecteurs || []) { const g = groupe(e); g.emails.add(e); g.arbres.add(a.id); }
+  const clients = [...G.values()].map(g => ({...g, emails: [...g.emails], arbres: [...g.arbres], nom: [...g.noms].sort((x, y) => y.length - x.length)[0] || ''}))
+    .sort((a, b) => (b.commandes.length ? 1 : 0) - (a.commandes.length ? 1 : 0) || a.cle.localeCompare(b.cle));
+  const avecClient = new Set(clients.flatMap(c => c.arbres));
+  const orphelins = arbres.filter(a => !avecClient.has(a.id));
+  const titre = id => (arbres.find(a => a.id === id) || {}).titre || id;
+  const boutonsArbre = a => `<div class="rangee"><button class="btn btn-1" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button><button class="btn" data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.proposition ? `<button class="btn" data-or="${esc(a.id)}">Orientation${a.orientation ? ' (ouverte)' : ''}</button>` : ''}${a.livre ? `<button class="btn" data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}</div>`;
+  const ligneArbre = (id, c) => { const a = arbres.find(x => x.id === id); if (!a) return ''; const ouvert = !c || (a.lecteurs || []).some(e => cleEmail(e) === c.cle);
+    return `<li class="adm-arbre"><div><b>${esc(a.titre)}</b> <span class="petit">${esc(a.sous_titre || '')} · ${a.n_ancetres || 0} ancêtres${a.maj ? ' · ' + esc(new Date(a.maj).toLocaleDateString('fr-FR')) : ''}${ouvert ? '' : ' · <i>pas encore ouvert à ce client</i>'}</span></div>${boutonsArbre(a)}</li>`; };
   $app.innerHTML = barre() + `<main class="page large"><div class="admin">
-    <nav class="rail" aria-label="Administration"><button data-t="arbres" aria-current="${onglet === 'arbres'}">Tous les arbres</button><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button></nav>
-    <section>${onglet === 'arbres' ? `<h1>Tous les arbres</h1>
-      <div class="outils"><label class="cache-visuel" for="filtre">Rechercher</label><input id="filtre" type="search" placeholder="Titre, client…"></div>
-      <table class="liste"><thead><tr><th>Arbre</th><th>Clients</th><th class="num">Ancêtres</th><th>Mis à jour</th><th></th></tr></thead><tbody>
-      ${arbres.map(a => `<tr data-f="${esc((a.titre + ' ' + lecteurs(a.id).join(' ')).toLowerCase())}"><td><b>${esc(a.titre)}</b><br><span class="petit">${esc(a.sous_titre || '')}</span></td>
-        <td>${lecteurs(a.id).map(esc).join('<br>') || '<span class="petit">aucun</span>'}</td><td class="num">${a.n_ancetres || 0}</td><td>${esc(a.maj ? new Date(a.maj).toLocaleDateString('fr-FR') : '')}</td>
-        <td><div class="rangee"><button class="btn btn-1" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button><button class="btn" data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.proposition ? `<button class="btn" data-or="${esc(a.id)}">Orientation${a.orientation ? ' (ouverte)' : ''}</button>` : ''}${a.livre ? `<button class="btn" data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}</div></td></tr>`).join('')}
-      </tbody></table>` : `<h1>Clients</h1>
+    <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button></nav>
+    <section>${onglet === 'archiviste' ? `<h1>Archiviste</h1><div id="suivi"></div>` : `<h1>Clients</h1>
+      <div class="outils"><label class="cache-visuel" for="filtre">Rechercher</label><input id="filtre" type="search" placeholder="Nom, adresse, titre…"></div>
+      <ul class="adm-clients">${clients.map(c => `<li class="adm-client" data-f="${esc((c.nom + ' ' + c.emails.join(' ') + ' ' + c.arbres.map(titre).join(' ')).toLowerCase())}">
+        <div class="adm-tete"><div><b>${esc(c.nom || c.emails[0])}</b><div class="petit">${c.emails.map(esc).join(' · ')}${c.commandes.length ? ` · ${c.commandes.length} commande${c.commandes.length > 1 ? 's' : ''}` : ''}</div></div>
+          <div class="rangee">${c.commandes.length ? `<button class="btn" data-suivi="${esc(c.cle)}">Échanges</button>` : ''}<button class="btn" data-mod="${esc(c.cle)}">Accès</button><button class="btn" data-lien="${esc(c.emails[0])}">Envoyer un lien</button><button class="btn" data-comme="${esc(c.emails[0])}">Voir comme ce client</button></div></div>
+        ${c.arbres.length ? `<ul class="adm-arbres">${c.arbres.map(id => ligneArbre(id, c)).join('')}</ul>` : '<p class="petit">Aucun arbre ouvert à ce client.</p>'}</li>`).join('')}</ul>
+      ${orphelins.length ? `<h2 class="sv-h2">Arbres sans client</h2><ul class="adm-arbres">${orphelins.map(a => ligneArbre(a.id, null)).join('')}</ul>` : ''}
       <form class="form-compte" id="fc"><b>Créer ou modifier un accès</b>
         <label class="etiq" for="fc-email">Adresse e-mail du client</label><input id="fc-email" type="email" required>
         <div class="cases">${arbres.map(a => `<label><input type="checkbox" value="${esc(a.id)}"> ${esc(a.titre)}</label>`).join('')}</div>
-        <div class="rangee"><button class="btn btn-1" type="submit">Enregistrer</button><label><input type="checkbox" id="fc-lien"> envoyer aussi un lien d’accès</label><span class="note-ok" id="fc-ok" role="status"></span></div></form>
-      <table class="liste"><thead><tr><th>Client</th><th>Arbres</th><th></th></tr></thead><tbody>
-      ${comptes.map(c => `<tr><td>${esc(c.email)}</td><td>${(c.arbres || []).map(id => esc((arbres.find(a => a.id === id) || {}).titre || id)).join('<br>')}</td>
-        <td><div class="rangee"><button class="btn" data-mod="${esc(c.email)}">Modifier</button><button class="btn" data-lien="${esc(c.email)}">Envoyer un lien d’accès</button><button class="btn" data-comme="${esc(c.email)}">Voir comme ce client</button></div></td></tr>`).join('')}
-      </tbody></table>`}</section></div></main>`;
+        <div class="rangee"><button class="btn btn-1" type="submit">Enregistrer</button><label><input type="checkbox" id="fc-lien"> envoyer aussi un lien d’accès</label><span class="note-ok" id="fc-ok" role="status"></span></div></form>`}</section></div></main>`;
   brancherBarre();
   $app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => pageAdmin(b.dataset.t));
   $app.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ouvrirArbre(b.dataset.o, b.dataset.v));
   $app.querySelectorAll('[data-rl]').forEach(b => b.onclick = () => relecture(arbres.find(a => a.id === b.dataset.rl), true));
   $app.querySelectorAll('[data-or]').forEach(b => b.onclick = () => orientation(arbres.find(a => a.id === b.dataset.or), true));
+  if (onglet === 'archiviste') ouvrirSuivi(document.getElementById('suivi'), S, arbres, {cleEmail, client: pageAdmin.client}).catch(e => { document.getElementById('suivi').innerHTML = `<p>Impossible de charger le suivi : ${esc(e.message || e)}</p>`; });
+  pageAdmin.client = null;
+  $app.querySelectorAll('[data-suivi]').forEach(b => b.onclick = () => { pageAdmin.client = b.dataset.suivi; pageAdmin('archiviste'); });
   const fl = $app.querySelector('#filtre');
-  if (fl) fl.oninput = () => { const q = fl.value.toLowerCase(); $app.querySelectorAll('tr[data-f]').forEach(tr => tr.hidden = !tr.dataset.f.includes(q)); };
+  if (fl) fl.oninput = () => { const q = fl.value.toLowerCase(); $app.querySelectorAll('[data-f]').forEach(li => li.hidden = !li.dataset.f.includes(q)); };
   const fc = $app.querySelector('#fc');
   if (fc) {
     fc.onsubmit = async e => {
@@ -313,9 +343,10 @@ async function pageAdmin(onglet) {
       pageAdmin('clients');
     };
     $app.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => {
-      const c = comptes.find(x => x.email === b.dataset.mod);
-      fc.querySelector('#fc-email').value = c.email;
-      fc.querySelectorAll('.cases input').forEach(i => i.checked = (c.arbres || []).includes(i.value));
+      const c = clients.find(x => x.cle === b.dataset.mod);
+      const compte = comptes.find(x => cleEmail(x.email) === c.cle) || {email: c.emails[0], arbres: c.arbres};
+      fc.querySelector('#fc-email').value = compte.email;
+      fc.querySelectorAll('.cases input').forEach(i => i.checked = (compte.arbres || []).includes(i.value));
       fc.scrollIntoView({behavior: 'smooth'});
     });
     $app.querySelectorAll('[data-lien]').forEach(b => b.onclick = async () => { b.disabled = true; await S.envoyerLienA(b.dataset.lien); b.textContent = 'Lien envoyé'; });
