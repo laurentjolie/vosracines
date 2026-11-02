@@ -135,6 +135,15 @@ function ecranConnexion(erreur = '', valeur = lire('vr-email') || '') {
     const v = inp.value.trim().toLowerCase();
     if (!v) return ecranConnexion('Indiquez votre adresse e-mail pour recevoir le lien.', v);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return ecranConnexion('Cette adresse ne semble pas complète. Vérifiez qu’elle contient bien un @ et un point, par exemple marie.dupont@orange.fr.', v);
+    // 02/11/2026 : sur un clavier AZERTY (Mac surtout), les chiffres sans la touche Maj donnent « &é"'(-è_çà ».
+    // paul.jolie92@ devenait paul.jolieçé@ : aucun e-mail ne pouvait partir. On le dit, et on propose la bonne adresse.
+    if (/[^\x21-\x7e]/.test(v)) {
+      const AZ = {'&': '1', 'é': '2', '"': '3', "'": '4', '(': '5', '§': '6', 'è': '7', '!': '8', 'ç': '9', 'à': '0'};
+      const [l, d] = v.split('@'); const propose = l.replace(/[&é"'(§è!çà]/g, c => AZ[c]) + '@' + d;
+      const ok = /^[\x21-\x7e]+$/.test(propose);
+      return ecranConnexion(ok ? `Une adresse e-mail ne peut pas contenir d’accent ni de « ç ». Vouliez-vous écrire ${propose} ? Sur un clavier français, les chiffres s’obtiennent avec la touche Maj.`
+                               : 'Une adresse e-mail ne peut pas contenir d’accent, de « ç » ni d’espace. Vérifiez-la, par exemple marie.dupont@orange.fr.', ok ? propose : v);
+    }
     f.querySelector('button').disabled = true;
     try { await S.demanderLien(v); } catch (err) { console.warn(err); }
     ecrire('vr-email', v); ecranEnvoye(v);
@@ -154,16 +163,19 @@ function ecranEnvoye(email) {
   r.onclick = async () => { r.disabled = true; try { await S.demanderLien(email); } catch (e) {} ecranEnvoye(email); };
   $app.querySelector('#autre').onclick = () => { clearInterval(t); ecrire('vr-email', null); ecranConnexion(); };
 }
-function ecranEntrer(erreur = '') {   // page ouverte depuis l'e-mail : on ne consomme le lien qu'au clic (les antivirus « visitent » les liens)
-  const connu = lire('vr-email') || '';
+function ecranEntrer(erreur = '', saisir = false) {   // page ouverte depuis l'e-mail : on ne consomme le lien qu'au clic (les antivirus « visitent » les liens)
+  // 02/11/2026 : l'adresse retenue sur cet appareil peut être fausse (faute de frappe, autre personne, autre demande) :
+  // on peut toujours la changer, et un refus repasse à la saisie au lieu de reproposer la même adresse.
+  const connu = saisir ? '' : (lire('vr-email') || '');
   $app.innerHTML = `<main class="porte"><div class="carte-porte">${LOGO}
     <h1>Bienvenue</h1>
     <form novalidate>
-      ${connu ? `<p class="sous">Vous entrez avec l’adresse <b>${esc(connu)}</b>.</p>` : `<p class="sous">Pour votre sécurité, confirmez l’adresse e-mail à laquelle vous avez reçu ce lien.</p>
+      ${connu ? `<p class="sous">Vous entrez avec l’adresse <b>${esc(connu)}</b>. <button type="button" class="btn-lien" id="pas-moi">Ce n’est pas mon adresse</button></p>` : `<p class="sous">Pour votre sécurité, confirmez l’adresse e-mail à laquelle vous avez reçu ce lien.</p>
       <label class="etiq" for="email">Votre adresse e-mail</label><input id="email" type="email" autocomplete="email" inputmode="email">`}
       <p class="msg-erreur" role="alert">${esc(erreur)}</p>
       <button class="btn btn-1" type="submit">Ouvrir mon espace</button>
     </form></div></main>`;
+  const pm = $app.querySelector('#pas-moi'); if (pm) pm.onclick = () => { ecrire('vr-email', null); ecranEntrer('', true); };
   $app.querySelector('form').addEventListener('submit', async e => {
     e.preventDefault();
     const email = (connu || $app.querySelector('#email').value).trim().toLowerCase();
@@ -172,7 +184,7 @@ function ecranEntrer(erreur = '') {   // page ouverte depuis l'e-mail : on ne co
       history.replaceState(null, '', location.pathname);
     } catch (err) {
       const c = String(err && err.code || '');
-      if (/invalid-email/.test(c)) return ecranEntrer('Cette adresse n’est pas celle à laquelle le lien a été envoyé.');
+      if (/invalid-email/.test(c)) { ecrire('vr-email', null); return ecranEntrer(`Ce lien a été envoyé à une autre adresse que ${email}. Indiquez l’adresse qui a reçu l’e-mail.`, true); }
       ecranExpire(email);
     }
   });
