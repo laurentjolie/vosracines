@@ -42,7 +42,7 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
   function rendre() {
     el.innerHTML = `<div class="orientation"><div class="or-int">
       <h1>Orienter votre livre</h1>
-      <p class="or-chapo">Voici le premier jet de <b>${esc(meta.titre)}</b>. Avant la version finale, dites-nous l’allure et l’ambiance que vous voulez. Inutile de relire mot à mot : la relecture fine viendra avec le bon à tirer.</p>
+      <p class="or-chapo">Voici le premier jet de <b>${esc(meta.titre)}</b>. Commentez-le : nous en tirons une nouvelle version, le bon à tirer, que vous relirez et pourrez encore faire corriger avant de le valider pour l’impression. Dites-nous ici l’allure et l’ambiance que vous voulez ; inutile de relire mot à mot, la relecture fine viendra avec le bon à tirer.</p>
       ${meta.livre ? `<div class="or-feuilleter"><div><b>Feuilletez le premier jet et commentez-le</b><p>Toutes les pages du livre, comme ouvert devant vous. Sélectionnez une phrase ou touchez une image, et laissez votre remarque juste à côté.</p></div><button class="btn btn-1" data-feuilleter>Feuilleter et commenter</button></div>` : ''}
       <ol class="or-etapes">
       <li><h2>Le titre</h2><p class="aide">Quelques propositions, ou le titre de votre choix.</p>
@@ -66,12 +66,12 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
         <label class="or-prive"><input type="checkbox" id="or-prive" ${choix.usage_prive ? 'checked' : ''}> Ces images sont pour notre livre de famille, à usage privé.</label></li>
       <li><h2>L’ambiance</h2><p class="aide">Le ton, ce qui vous plaît, ce qui vous manque, ce que vous voudriez voir plus ou moins.</p>
         <label class="cache-visuel" for="or-amb">L’ambiance</label><textarea id="or-amb" rows="5" placeholder="Par exemple : plus de photos de famille, un ton plus léger, moins de dates…">${esc(choix.ambiance)}</textarea></li>
-      <li><h2>À creuser</h2><p class="aide">Un ancêtre, un lieu, une légende ou une question qui vous tient à cœur : nous y consacrons du temps de recherche avant la version finale.</p>
+      <li><h2>À creuser</h2><p class="aide">Un ancêtre, un lieu, une légende ou une question qui vous tient à cœur : nous y consacrons du temps de recherche avant le bon à tirer.</p>
         <label class="cache-visuel" for="or-cre">À creuser</label><textarea id="or-cre" rows="4" placeholder="Par exemple : on dit que l’arrière-grand-père a été blessé à Verdun, est-ce vrai ?">${esc(choix.creuser)}</textarea></li>
       </ol>
       <div class="or-pied"><button class="btn btn-1" data-enreg>Enregistrer mes choix</button><span class="note-ok" id="or-ok" role="status"></span>
-        <p class="petit">Vos choix restent modifiables. Nous vous écrivons quand la version finale est prête à relire.</p></div>
-      <input type="file" id="or-fichier" hidden multiple accept="image/*,application/pdf"></div></div>`;
+        <p class="petit">Vos choix restent modifiables. Nous vous écrivons quand le bon à tirer est prêt à relire.</p></div>
+      <input type="file" id="or-fichier" hidden multiple accept="image/*,.heic,.heif,application/pdf"></div></div>`;
     el.querySelectorAll('.or-vign[data-img]').forEach(async v => { const n = v.dataset.img; if (!n) return; const src = await img(n); if (src) v.style.backgroundImage = `url("${src}")`; });
     brancher();
   }
@@ -91,7 +91,7 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
     el.querySelectorAll('.or-carte.autre textarea, .or-carte.autre button').forEach(x => x.addEventListener('click', e => { const r = x.closest('label').querySelector('input[type=radio]'); if (!r.checked) { r.checked = true; r.dispatchEvent(new Event('change')); } }));
     el.querySelector('[data-enreg]').onclick = () => sauver(false, true);
     const fic = el.querySelector('#or-fichier');
-    el.querySelectorAll('[data-deposer]').forEach(b => b.onclick = e => { e.preventDefault(); usageDepot = b.dataset.deposer; fic.multiple = usageDepot === 'document'; fic.accept = usageDepot === 'document' ? 'image/*,application/pdf' : 'image/*'; fic.click(); });
+    el.querySelectorAll('[data-deposer]').forEach(b => b.onclick = e => { e.preventDefault(); usageDepot = b.dataset.deposer; fic.multiple = usageDepot === 'document'; fic.accept = usageDepot === 'document' ? 'image/*,.heic,.heif,application/pdf' : 'image/*,.heic,.heif'; fic.click(); });
     fic.onchange = () => deposer([...fic.files]);
     el.querySelectorAll('[data-suppr]').forEach(b => b.onclick = async () => { await S.supprimerDepot(meta.id, b.dataset.suppr); depots = depots.filter(d => d.id !== b.dataset.suppr); rendre(); });
     const f = el.querySelector('[data-feuilleter]'); if (f && opt.feuilleter) f.onclick = opt.feuilleter;
@@ -114,13 +114,20 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
     for (const [i, f] of files.entries()) {
       etat.textContent = `Envoi de ${f.name} (${i + 1}/${files.length})…`;
       try {
-        // 01/11 : les documents doivent pouvoir être imprimés : on garde le fichier d'origine jusqu'à 20 Mo, sans le recompresser
-        const data = f.size < 20 * MO && (f.type.startsWith('image/') || f.type === 'application/pdf') ? await enDataURL(f) : f.type.startsWith('image/') ? await enJpeg(f, 5000) : null;
+        // 01/11 : les documents doivent pouvoir être imprimés : on garde le fichier d'origine jusqu'à 20 Mo, sans le recompresser.
+        // 02/11/2026 (audit UX, E4) : une photo HEIC (iPhone) est convertie en JPEG avant le dépôt, comme une image de 20 Mo ou plus :
+        // le HEIC n'est lisible ni par le navigateur de l'administration ni par la chaîne d'impression. Si ce navigateur ne sait pas
+        // le lire (Chrome ou Firefox hors Apple), on garde l'original plutôt que de perdre la photo.
+        const heic = /^image\/hei[cf]/i.test(f.type) || /\.(heic|heif)$/i.test(f.name), image = f.type.startsWith('image/') || heic;
+        let data = null, nom = f.name, type = f.type || (heic ? 'image/heic' : '');
+        if (image && (heic || f.size >= 20 * MO)) {
+          try { data = await enJpeg(f, 5000); nom = f.name.replace(/\.\w+$/, '') + '.jpg'; type = 'image/jpeg'; } catch (e) { data = null; }
+          if (!data && heic && f.size < 20 * MO) data = await enDataURL(f);
+        } else if (f.size < 20 * MO && (image || f.type === 'application/pdf')) data = await enDataURL(f);
         if (!data) { etat.textContent = `${f.name} : format non pris en charge (photo ou PDF de moins de 20 Mo).`; continue; }
         const parts = []; for (let k = 0; k < data.length; k += MORCEAU) parts.push(data.slice(k, k + MORCEAU));
         if (parts.length > MAX_MORCEAUX) { etat.textContent = `${f.name} est trop lourd.`; continue; }
-        const nom = f.size >= 20 * MO && f.type.startsWith('image/') ? f.name.replace(/\.\w+$/, '') + '.jpg' : f.name;
-        const id = await S.deposer(meta.id, {nom: nom.slice(0, 190), type: f.size >= 20 * MO && f.type.startsWith('image/') ? 'image/jpeg' : f.type, taille: data.length, usage}, parts);
+        const id = await S.deposer(meta.id, {nom: nom.slice(0, 190), type, taille: data.length, usage}, parts);
         depots.push({id, nom, usage, complet: true});
         if (usage !== 'document') choix[usage] = usage === 'couverture' ? 'autre' : 'q-autre';
       } catch (e) { console.error(e); etat.textContent = `${f.name} : l’envoi n’a pas marché.`; return; }

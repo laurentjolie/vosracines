@@ -4,8 +4,9 @@ const W = () => (innerWidth < 720 ? 168 : 220), H = () => (innerWidth < 720 ? 80
 const GAP = 28, GAP_COUPLE = 48, GAP_GEN = 72, PLUS = 3;
 const PROF = () => (innerWidth < 720 ? 2 : 3);
 const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-const PREUVE = {acte: ['●', 'p-acte', 'Acte lu', 'nous avons lu l’acte'], piste: ['◐', 'p-piste', 'Piste', 'indiqué par d’autres chercheurs, pas encore vérifié'],
-  hypothese: ['○', 'p-hyp', 'Hypothèse', 'probable, à confirmer'], famille: ['◆', 'p-fam', 'Donné par la famille', 'information transmise par la famille']};
+// 02/11/2026 (audit UX, D1) : 5e élément = le mot court affiché sur la carte, à la place du glyphe (couleur seule, 15 px)
+const PREUVE = {acte: ['●', 'p-acte', 'Acte lu', 'nous avons lu l’acte', 'Acte'], piste: ['◐', 'p-piste', 'Piste', 'indiqué par d’autres chercheurs, pas encore vérifié', 'Piste'],
+  hypothese: ['○', 'p-hyp', 'Hypothèse', 'probable, à confirmer', 'Supposé'], famille: ['◆', 'p-fam', 'Donné par la famille', 'information transmise par la famille', 'Famille']};
 // 29/10 : le trait dit la solidite du lien de parente (du parent vers l'enfant), pas seulement la personne
 const LIEN = {acte: {w: 3, d: '', lib: 'Lien prouvé par un acte'}, piste: {w: 2.2, d: '9 6', lib: 'Lien probable (piste)'},
   hypothese: {w: 2.2, d: '1.5 6', lib: 'Lien supposé (hypothèse)'}, famille: {w: 2.2, d: '12 4 2 4', lib: 'Lien donné par la famille'}, inconnu: {w: 2, d: '4 4', lib: 'Lien non vérifié'}};
@@ -59,6 +60,9 @@ export function creerArbre(racineEl, data, opt = {}) {
   }
   const ego = P[data.racine] ? data.racine : Object.keys(P)[0];
   const R = data.registre || {};
+  // 02/11/2026 (chantier 3, tâche 9) : recherches familiales en attente de validation (PISTES-FAMILLE-*.md), administrateur seul
+  const AV = opt.admin ? (data.a_valider || []) : [];
+  const LIBAV = {acte: ['Prouvé', 'p-acte'], piste: ['Piste', 'p-piste'], hypothese: ['Hypothèse', 'p-hyp'], echec: ['Échec', ''], autre: ['Note', '']};
   const NIVR = {'prouvé': 'Prouvé : lu sur l’image', 'piste forte': 'Piste forte : relevé avec cote, ou deux sources concordantes', 'piste': 'Piste : index ou arbre en ligne', 'hypothèse': 'Hypothèse : un seul indice', 'écarté': 'Écarté : homonyme ou document rejeté'};
   const RANGR = {acte: 0, piste: 1, hypothese: 2, ecarte: 3};
   const triRa = ra => ra.filter(([i]) => R[i]).sort((x, y) => (RANGR[R[x[0]].niv] ?? 1) - (RANGR[R[y[0]].niv] ?? 1) || String(R[x[0]].d || '').localeCompare(String(R[y[0]].d || '')));
@@ -75,7 +79,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     <ul class="suggestions" id="sugg" role="listbox" hidden></ul>
   </div>
   <div class="fil" hidden></div>
-  <div class="flottant ensemble"><button class="ens-menu" data-a="menu" aria-expanded="false">Plus ▾</button><button data-a="entier">Ouvrir l’arbre en entier</button>${Object.values(P).filter(p => p.pep && !p.cache).length ? `<button data-a="pepites">✦ Les pépites (${Object.values(P).filter(p => p.pep && !p.cache).length})</button>` : ''}${(data.actes || []).length ? `<button data-a="actes">Les actes du livre (${data.actes.length})</button>` : ''}<button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
+  <div class="flottant ensemble"><button class="ens-menu" data-a="menu" aria-expanded="false">Plus ▾</button><button data-a="entier">Ouvrir l’arbre en entier</button>${Object.values(P).filter(p => p.pep && !p.cache).length ? `<button data-a="pepites">✦ Les pépites (${Object.values(P).filter(p => p.pep && !p.cache).length})</button>` : ''}${(data.actes || []).length ? `<button data-a="actes">Les actes du livre (${data.actes.length})</button>` : ''}${AV.length ? `<button data-a="avalider">Recherches à valider (${AV.length})</button>` : ''}<button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
   <div class="acte-vue" hidden role="dialog" aria-modal="true" aria-label="Acte"></div>
   <div class="flottant zoom">
     <button data-a="plus" aria-label="Agrandir">+</button><button data-a="moins" aria-label="Réduire">−</button>
@@ -83,7 +87,7 @@ export function creerArbre(racineEl, data, opt = {}) {
   </div>
   <div class="flottant legende"><button aria-expanded="true">Légende<span class="leg-plus"> : couleurs, preuves et traits</span></button><div class="corps">
     <ul>${['l1','l2','l3','l4'].map((l, i) => `<li><span class="sw" style="background:var(--${l})"></span>${esc(nomLignee(i))}</li>`).join('')}</ul>
-    <ul>${['acte','piste','hypothese','famille'].map(n => `<li><span class="${PREUVE[n][1]}" style="width:16px;text-align:center">${PREUVE[n][0]}</span><span><b>${PREUVE[n][2]}</b> : ${PREUVE[n][3]}</span></li>`).join('')}
+    <ul>${['acte','piste','hypothese','famille'].map(n => `<li><span class="preuve mot ${PREUVE[n][1]}">${PREUVE[n][4]}</span><span><b>${PREUVE[n][2]}</b> : ${PREUVE[n][3]}</span></li>`).join('')}
     <li><span style="width:16px;text-align:center">🔒</span><span>Personne vivante : seul le prénom est affiché</span></li></ul>
     <p class="leg-titre">Les pépites</p><ul><li><span class="sw pepite-sw"></span><span>Halo doré : une personne sur qui on en sait davantage (guerre, décoration, presse, justice, voyage, histoire de famille)</span></li></ul>
     <p class="leg-titre">Les traits entre parents et enfants</p>
@@ -144,9 +148,9 @@ export function creerArbre(racineEl, data, opt = {}) {
     const dates = [an(p.na) || an(p.ba), an(p.de)].some(Boolean) ? `${an(p.na) || an(p.ba) || '?'}${p.de ? ' · ' + an(p.de) : (p.v ? '' : ' · ?')}` : '';
     const lieu = lieuCourt((p.na || p.ba || {}).p) || (p.me && p.me[0] ? met(p.me[0])[0] : '');
     const lab = [nomComplet(p), dates.replace(' · ', ' à '), lieu, pv ? pv[2] : '', p.pep ? 'pépite de l’arbre' : ''].filter(Boolean).join(', ');
-    return `<button class="carte ${est ? 'ego' : l} ${choisi === id ? 'choisie' : ''} ${p.pep ? 'pepite' : ''} ${extra}" data-id="${esc(id)}" style="left:${x}px;top:${y}px" ${est ? `data-ruban="${esc(egoNom)}"` : ''} aria-label="${esc(lab)}">
+    return `<button class="carte ${est ? 'ego' : l} ${choisi === id ? 'choisie' : ''} ${p.pep ? 'pepite' : ''} ${pv ? 'avec-preuve' : ''} ${extra}" data-id="${esc(id)}" style="left:${x}px;top:${y}px" ${est ? `data-ruban="${esc(egoNom)}"` : ''} aria-label="${esc(lab)}">
       <span class="nom" title="${esc(nomComplet(p))}">${esc(nomComplet(p))}</span><span class="dates">${esc(dates)}</span><span class="lieu">${esc(lieu)}</span>
-      ${pv ? `<span class="preuve ${pv[1]}" aria-hidden="true">${pv[0]}</span>` : ''}${p.pep ? '<span class="etoile" aria-hidden="true">✦</span>' : ''}</button>`;
+      ${pv ? `<span class="preuve mot ${pv[1]}" aria-hidden="true">${pv[4]}</span>` : ''}${p.pep ? '<span class="etoile" aria-hidden="true">✦</span>' : ''}</button>`;
   }
 
   function dessiner() {
@@ -239,13 +243,16 @@ export function creerArbre(racineEl, data, opt = {}) {
     const a = e.target.closest('button')?.dataset.a; const ens = racineEl.querySelector('.ensemble');
     if (a === 'menu') { const o = ens.classList.toggle('ouvert'); e.target.closest('button').setAttribute('aria-expanded', String(o)); return; }
     ens.classList.remove('ouvert'); racineEl.querySelector('.ens-menu')?.setAttribute('aria-expanded', 'false');
-    if (a === 'tout') toutVoir(); if (a === 'imprimer') print(); if (a === 'actes') listeActes(); if (a === 'pepites') listePepites();
+    if (a === 'tout') toutVoir(); if (a === 'imprimer') print(); if (a === 'actes') listeActes(); if (a === 'pepites') listePepites(); if (a === 'avalider') listeAValider();
     if (a === 'entier') { tout = !tout; if (tout) focus = ego; e.target.closest('button').textContent = tout ? 'Revenir à la vue simple' : 'Ouvrir l’arbre en entier'; dessiner(); if (tout) toutVoir(); else premiereVue(); }
   });
   const leg = racineEl.querySelector('.legende');
   const legBtn = leg.querySelector('button');
   const legVue = (() => { try { return localStorage.getItem('vr-legende'); } catch (e) { return null; } })();
-  if (true) { legBtn.setAttribute('aria-expanded', 'false'); leg.querySelector('.corps').hidden = true; }
+  // 02/11/2026 (audit UX, D1) : légende ouverte à la première visite, repliée ensuite (le choix est mémorisé).
+  // Sur téléphone elle couvrirait presque tout l'arbre : elle y reste repliée, la bulle d'aide suffit.
+  if (legVue || innerWidth < 720) { legBtn.setAttribute('aria-expanded', 'false'); leg.querySelector('.corps').hidden = true; }
+  if (!legVue && innerWidth >= 720) { try { localStorage.setItem('vr-legende', '1'); } catch (e) {} }
   legBtn.addEventListener('click', () => { const o = legBtn.getAttribute('aria-expanded') === 'true'; legBtn.setAttribute('aria-expanded', String(!o)); leg.querySelector('.corps').hidden = o; try { localStorage.setItem('vr-legende', '1'); } catch (e) {} });
   addEventListener('keydown', e => {
     if (e.target.matches('input')) { if (e.key === 'Escape') e.target.blur(); return; }
@@ -299,6 +306,7 @@ export function creerArbre(racineEl, data, opt = {}) {
       ${(p.ac || []).length ? `<h3>Ses actes reproduits (${p.ac.length})</h3><div class="liens actes">${p.ac.map(i => data.actes[i]).filter(Boolean).map((a, j) => `<button data-acte="${p.ac[j]}"><b>${esc(a.titre)}</b><small>${esc(a.ref)}</small></button>`).join('')}</div>` : ''}
       ${pa && (P[pa.h] || P[pa.w]) ? `<h3>Ses parents</h3><div class="liens">${[pa.h, pa.w].filter(z => P[z]).map(lien).join('')}</div>` : ''}
       ${ks.length ? `<h3>Ses enfants</h3><div class="liens">${ks.map(lien).join('')}</div>` : ''}
+      ${avDe(id).length ? `<h3>Recherches à valider (admin, ${avDe(id).length})</h3><div class="liens actes">${avDe(id).map(([x, j]) => `<button data-av="${j}"><span><b>${esc(x.t)}</b><small>${esc([x.lib, x.f + ', ligne ' + x.l].filter(Boolean).join(' · '))}</small></span></button>`).join('')}</div>` : ''}
       ${opt.admin && (p.no || (p.src && p.src.length)) ? `<h3>Notes de recherche (admin)</h3><div class="note">${esc(p.no || '')}${p.src && p.src.length ? '\nSources : ' + esc(p.src.join(', ')) : ''}</div>` : ''}
       <div class="actions"><button class="btn btn-1" data-recentrer="${esc(id)}">Voir son arbre</button></div></div>`;
     fiche.hidden = false; fiche.classList.remove('pleine');
@@ -309,6 +317,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     fiche.querySelectorAll('[data-acte]').forEach(b => b.onclick = () => ouvrirActe(+b.dataset.acte));
     fiche.querySelectorAll('[data-reg]').forEach(b => b.onclick = () => ouvrirRegistre(b.dataset.reg));
     fiche.querySelectorAll('[data-pourquoi]').forEach(b => b.onclick = () => ouvrirLien(b.dataset.pourquoi));
+    fiche.querySelectorAll('[data-av]').forEach(b => b.onclick = () => ouvrirAValider(+b.dataset.av));
     fiche.querySelector('.fermer').focus({preventScroll: true});
   }
   function fermerFiche() { fiche.hidden = true; choisi = null; cartesEl.querySelectorAll('.choisie').forEach(c => c.classList.remove('choisie')); }
@@ -328,7 +337,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     const qui = (a.personnes || []).filter(z => P[z] && !P[z].cache);
     av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>${esc(a.titre)}</h2><button class="fermer">Fermer</button></div>
       <p class="acte-ref">${esc(a.ref)}</p>
-      <div class="acte-img"><span class="petit">Chargement de l’image…</span></div>
+      ${a.img ? '<div class="acte-img"><span class="petit">Chargement de l’image…</span></div>' : ''}
       ${a.texte ? `<h3>Ce que dit l’acte</h3><div class="acte-texte">${a.texte}</div>` : ''}
       ${a.trad ? `<h3>En français d’aujourd’hui</h3><div class="acte-texte">${a.trad}</div>` : ''}
       ${a.note ? `<p class="acte-note">${a.note}</p>` : ''}
@@ -338,10 +347,11 @@ export function creerArbre(racineEl, data, opt = {}) {
     av.onclick = e => { if (e.target === av) fermerActe(); };
     av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
     av.querySelector('.fermer').focus();
-    try {
+    // 02/11/2026 (audit UX, D2) : pas de cadre vide ; une image introuvable retire son cadre au lieu d'afficher « Image non disponible »
+    if (a.img) try {
       const src = opt.image ? await opt.image(a.img) : null; const box = av.querySelector('.acte-img'); if (!box) return;
-      box.innerHTML = src ? `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${esc(a.titre)}"></a><span class="petit">Touchez l’image pour l’ouvrir en grand.</span>` : '<span class="petit">Image non disponible.</span>';
-    } catch (e) { const box = av.querySelector('.acte-img'); if (box) box.innerHTML = '<span class="petit">Image non disponible.</span>'; }
+      if (src) box.innerHTML = `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${esc(a.titre)}"></a><span class="petit">Touchez l’image pour l’ouvrir en grand.</span>`; else box.remove();
+    } catch (e) { av.querySelector('.acte-img')?.remove(); }
   }
   // 30/10 : explication d'un lien enfant -> parents, et fiche d'un acte du registre des actes vus
   function ouvrirLien(id) {
@@ -367,23 +377,29 @@ export function creerArbre(racineEl, data, opt = {}) {
     const a = R[i]; if (!a) return; const pv = preuve(a.niv);
     const qui = Object.entries(P).filter(([, x]) => !x.cache && (x.ra || []).some(([j]) => j === i)).map(([z]) => z);
     const quand = a.d ? dateLongue(a.d) : '';
+    // 02/11/2026 (audit UX, D2) : sans image chez nous, le lien vers l'image des archives passe en premier et en gros
+    const ouTrouver = [a.so, a.co && !(a.so || '').includes(a.co) ? 'référence ' + a.co : '', a.vu ? 'vue ' + a.vu : ''].filter(Boolean).join(', ');
+    const lienArchives = a.u ? `<p class="lien-archives"><a class="btn btn-2" href="${esc(a.u)}" target="_blank" rel="noopener noreferrer">Voir le document en ligne</a>${ouTrouver ? `<span class="petit">${esc(ouTrouver)}</span>` : ''}</p>` : '';
     av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>${esc(a.t || a.ty)}</h2><button class="fermer">${retour ? 'Retour' : 'Fermer'}</button></div>
       <p class="acte-ref">${esc([a.ty, quand, a.lieu].filter(Boolean).join(' · '))}</p>
       <p class="niv-acte"><span class="pv ${pv ? pv[1] : ''}">${pv ? pv[0] : ''}</span> <b>${esc(NIVR[a.nv] || (pv ? pv[2] : ''))}</b>${a.pn ? ` : ${esc(a.pn)}` : ''}</p>
+      ${a.img ? '<div class="acte-img"><span class="petit">Chargement de l’image…</span></div>' : lienArchives}
       ${a.pr ? `<h3>Ce que ce document établit</h3><p>${esc(a.pr)}</p>` : ''}
-      ${a.img ? '<div class="acte-img"><span class="petit">Chargement de l’image…</span></div>' : ''}
       ${a.tr ? `<h3>Ce qu’on y lit</h3><div class="acte-texte">« ${esc(a.tr)} »</div>` : ''}
-      <h3>Où le trouver</h3><p class="acte-ref">${esc([a.so, a.co && !(a.so || '').includes(a.co) ? 'cote ' + a.co : '', a.vu ? 'vue ' + a.vu : ''].filter(Boolean).join(', ') || 'Source non précisée')}</p>
-      ${a.u ? `<p><a href="${esc(a.u)}" target="_blank" rel="noopener noreferrer">Voir sur le site des archives</a></p>` : ''}
+      <h3>Où le trouver</h3><p class="acte-ref">${esc(ouTrouver || 'Source non précisée')}</p>
+      ${a.u && a.img ? `<p><a href="${esc(a.u)}" target="_blank" rel="noopener noreferrer">Voir sur le site des archives</a></p>` : ''}
       ${qui.length ? `<h3>Dans ce document</h3><div class="liens">${qui.map(z => `<button data-voir="${esc(z)}">${esc(nomComplet(P[z]))}</button>`).join('')}</div>` : ''}
+      ${opt.admin && a.lec ? `<h3>Notes de lecture (admin)</h3><div class="note">${esc(a.lec)}</div>` : ''}
+      ${opt.admin && a.fi ? `<p class="petit">Fichier ${esc(a.fi)}${a.nsour > 1 ? `, cité ${a.nsour} fois dans l’arbre` : ''}</p>` : ''}
       ${opt.admin && (a.ln || []).length ? `<p class="petit">Dossier de recherche, ligne${a.ln.length > 1 ? 's' : ''} ${a.ln.join(', ')}</p>` : ''}</div>`;
     av.hidden = false; av.querySelector('.fermer').onclick = retour || fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
     av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
     av.querySelector('.fermer').focus();
     if (a.img) try {
       const src = opt.image ? await opt.image(a.img) : null; const box = av.querySelector('.acte-img'); if (!box) return;
-      box.innerHTML = src ? `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${esc(a.t || '')}"></a><span class="petit">Touchez l’image pour l’ouvrir en grand.</span>` : '<span class="petit">Image non disponible.</span>';
-    } catch (e) { const box = av.querySelector('.acte-img'); if (box) box.innerHTML = '<span class="petit">Image non disponible.</span>'; }
+      if (src) box.innerHTML = `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${esc(a.t || '')}"></a><span class="petit">Touchez l’image pour l’ouvrir en grand.</span>`;
+      else box.outerHTML = lienArchives;
+    } catch (e) { const box = av.querySelector('.acte-img'); if (box) box.outerHTML = lienArchives; }
   }
   function listeActes() {
     av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>Les actes du livre</h2><button class="fermer">Fermer</button></div>
@@ -398,6 +414,47 @@ export function creerArbre(racineEl, data, opt = {}) {
       <div class="liens actes">${L.map(([id, p]) => `<button data-voir="${esc(id)}"><b>${esc(nomComplet(p))}</b><small>${esc([[an(p.na) || an(p.ba), an(p.de)].filter(Boolean).join(' à '), (p.pep.r || []).join(', ') || ((p.pep.x || [''])[0].slice(0, 110) + '…')].filter(Boolean).join(' · '))}</small></button>`).join('')}</div></div>`;
     av.hidden = false; av.querySelector('.fermer').onclick = fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
     av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
+  }
+  // 02/11/2026 (chantier 3, tâche 9) : recherches à valider (admin). Chaque bloc d'un fichier PISTES-FAMILLE : niveau,
+  // titre, texte, personnes de l'arbre qu'il nomme (fiches @I ou @F), captures d'actes (vignettes publiées avec les actes).
+  function avDe(id) { return AV.map((x, j) => [x, j]).filter(([x]) => (x.qui || []).includes(id)); }
+  function avBouton(x, j) {
+    const n = LIBAV[x.niv] || LIBAV.autre;
+    return `<button data-av="${j}"><span class="pv ${n[1]}"></span><span><b>${esc(x.t)}</b><small>${esc([x.lib, (x.qui || []).filter(z => P[z]).map(z => nomComplet(P[z])).slice(0, 3).join(', ')].filter(Boolean).join(' · '))}</small></span></button>`;
+  }
+  function listeAValider() {
+    const groupes = []; AV.forEach((x, j) => { const k = x.f + ' · ' + (x.piste || ''); const g = groupes.find(y => y.k === k); if (g) g.l.push([x, j]); else groupes.push({k, f: x.f, piste: x.piste, l: [[x, j]]}); });
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>Recherches à valider</h2><button class="fermer">Fermer</button></div>
+      <p class="acte-ref">Trouvailles des recherches familiales, pas encore reportées dans l’arbre. Visible par l’administrateur seul.</p>
+      ${groupes.map(g => `<h3>${esc(g.piste || g.f)}</h3><p class="petit">${esc(g.f)}</p><div class="liens actes registre">${g.l.map(([x, j]) => avBouton(x, j)).join('')}</div>`).join('')}</div>`;
+    av.hidden = false; av.querySelector('.fermer').onclick = fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelectorAll('[data-av]').forEach(b => b.onclick = () => ouvrirAValider(+b.dataset.av, listeAValider));
+    av.querySelector('.fermer').focus();
+  }
+  function ouvrirAValider(j, retour) {
+    const x = AV[j]; if (!x) return; const n = LIBAV[x.niv] || LIBAV.autre;
+    const qui = (x.qui || []).filter(z => P[z] && !P[z].cache);
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>${esc(x.t)}</h2><button class="fermer">${retour ? 'Retour' : 'Fermer'}</button></div>
+      <p class="acte-ref">${esc([x.piste, x.f + ', ligne ' + x.l].filter(Boolean).join(' · '))}</p>
+      <p class="niv-acte"><span class="pv ${n[1]}"></span> <b>${esc(x.lib)}</b> : à valider avant de reporter dans l’arbre</p>
+      ${x.x ? `<div class="note">${esc(x.x)}</div>` : ''}
+      ${(x.caps || []).length ? `<h3>Captures (${x.caps.length})</h3><div class="liens">${x.caps.map((c, k) => `<button data-cap="${k}">${esc(c.fi)}</button>`).join('')}</div>` : ''}
+      ${qui.length ? `<h3>Dans l’arbre</h3><div class="liens">${qui.map(z => `<button data-voir="${esc(z)}">${esc(nomComplet(P[z]))}</button>`).join('')}</div>` : ''}</div>`;
+    av.hidden = false; av.querySelector('.fermer').onclick = retour || fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
+    av.querySelectorAll('[data-cap]').forEach(b => b.onclick = () => ouvrirCapture(x.caps[+b.dataset.cap], () => ouvrirAValider(j, retour)));
+    av.querySelector('.fermer').focus();
+  }
+  async function ouvrirCapture(c, retour) {
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>${esc(c.fi)}</h2><button class="fermer">Retour</button></div>
+      <div class="acte-img"><span class="petit">Chargement de l’image…</span></div></div>`;
+    av.hidden = false; av.querySelector('.fermer').onclick = retour; av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelector('.fermer').focus();
+    try {
+      const src = opt.image ? await opt.image(c.img) : null; const box = av.querySelector('.acte-img'); if (!box) return;
+      if (src) box.innerHTML = `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${esc(c.fi)}"></a><span class="petit">Touchez l’image pour l’ouvrir en grand.</span>`;
+      else box.innerHTML = '<p class="petit">Capture pas encore publiée dans l’espace (publier_actes_famille.py).</p>';
+    } catch (e) { const box = av.querySelector('.acte-img'); if (box) box.innerHTML = '<p class="petit">Capture pas encore publiée dans l’espace.</p>'; }
   }
   addEventListener('keydown', e => { if (e.key === 'Escape' && !av.hidden) fermerActe(); });
 
@@ -424,9 +481,16 @@ export function creerArbre(racineEl, data, opt = {}) {
 
   // ---------- démarrage ----------
   dessiner();
-  let rep = null; try { rep = JSON.parse(localStorage.getItem('vr-vue-' + data.id) || 'null'); } catch (e) {}
-  if (rep && rep.focus && P[rep.focus] && rep.focus === focus) { tx = rep.tx; ty = rep.ty; k = rep.k; appliquer(); }
-  else premiereVue();
+  // 03/11/2026 (Laurent : « quand on ouvre la page de l'arbre, il faut qu'il soit centré ») : on n'ouvre plus sur la dernière
+  // position déplacée (souvenir de l'appareil), mais toujours centré sur la personne du livre ; et on recentre une fois la
+  // page posée (la zone de l'arbre peut avoir une taille nulle au premier instant), puis à chaque redimensionnement tant
+  // que le lecteur n'a pas encore bougé l'arbre lui-même.
+  let touche = false;
+  premiereVue();
+  const recaler = () => { if (!touche && vue.getBoundingClientRect().width > 0) premiereVue(); };
+  requestAnimationFrame(() => requestAnimationFrame(recaler)); setTimeout(recaler, 400);
+  ['pointerdown', 'wheel', 'keydown'].forEach(ev => vue.addEventListener(ev, () => { touche = true; }, {passive: true}));
+  try { new ResizeObserver(recaler).observe(vue); } catch (e) { addEventListener('resize', recaler); }
   let bulleVue = null; try { bulleVue = localStorage.getItem('vr-bulle'); } catch (e) {}
   if (!bulleVue) {
     const b = document.createElement('div'); b.className = 'bulle'; b.textContent = 'Touchez une personne pour lire sa fiche. Pincez ou utilisez + et − pour agrandir.';

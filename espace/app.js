@@ -2,7 +2,7 @@
 // et envoyé par l'archiviste), arbres en lecture selon le compte, menu administrateur.
 import {FIREBASE, EMULATEURS, CONTACT} from './config.js';
 import {creerArbre, nomComplet} from './arbre.js';
-import {ouvrirRelecture} from './relecture.js';
+import {ouvrirRelecture, telechargerPdf, etatLivre} from './relecture.js';
 import {ouvrirOrientation} from './orientation.js';
 import {ouvrirSuivi} from './suivi.js';
 
@@ -23,8 +23,9 @@ async function sourceFirebase() {
   await fb.setPersistence(auth, fb.browserLocalPersistence);
   const morceaux = async (id, quoi) => {
     const qs = await fb.getDocs(fb.collection(db, 'arbres', id, quoi));
-    const out = {personnes: {}, familles: [], actes: [], registre: {}};
-    qs.docs.sort((a, b) => +a.id - +b.id).forEach(d => { let x = d.data(); if (typeof x.d === 'string') x = JSON.parse(x.d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); out.actes.push(...(x.actes || [])); Object.assign(out.registre, x.registre || {}); });
+    // 02/11/2026 (chantier 3) : a_valider = recherches familiales à valider, présentes dans la version admin seulement
+    const out = {personnes: {}, familles: [], actes: [], registre: {}, a_valider: []};
+    qs.docs.sort((a, b) => +a.id - +b.id).forEach(d => { let x = d.data(); if (typeof x.d === 'string') x = JSON.parse(x.d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); out.actes.push(...(x.actes || [])); Object.assign(out.registre, x.registre || {}); out.a_valider.push(...(x.a_valider || [])); });
     return out;
   };
   return {
@@ -60,6 +61,10 @@ async function sourceFirebase() {
     majRetour: (id, rid, x) => fb.updateDoc(fb.doc(db, 'arbres', id, 'retours', rid), x),
     supprimerRetour: (id, rid) => fb.deleteDoc(fb.doc(db, 'arbres', id, 'retours', rid)),
     ouvrirRelecture: (id, oui) => fb.updateDoc(fb.doc(db, 'arbres', id), {relecture: !!oui}),
+    // 02/11/2026 (D1) : validation du bon à tirer par le client, puis PDF téléchargeable (morceaux base64 publiés depuis HQ)
+    validation: async id => { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'validation', 'bat')); if (!d.exists()) return null; const x = d.data(); return {...x, quand: x.quand && x.quand.toDate ? x.quand.toDate().toISOString() : x.quand}; },
+    valider: (id, version) => fb.setDoc(fb.doc(db, 'arbres', id, 'validation', 'bat'), {par: U.email, quand: fb.serverTimestamp(), version}),
+    pdf: async (id, n, progres) => { const out = []; for (let k = 0; k < n; k++) { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'pdf', String(k))); if (!d.exists()) throw new Error('morceau ' + k + ' absent'); out.push(d.data().d); if (progres) progres(k + 1, n); } return out; },
     // 30/10 : orientation du livre (premier jet -> BAT)
     ouvrirOrientationClient: (id, oui) => fb.updateDoc(fb.doc(db, 'arbres', id), {orientation: !!oui}),
     proposition: async id => { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'proposition', '0')); return d.exists() ? JSON.parse(d.data().d) : null; },
@@ -74,10 +79,11 @@ async function sourceFirebase() {
     },
     supprimerDepot: (id, did) => fb.deleteDoc(fb.doc(db, 'arbres', id, 'depots', did)),
     // 02/11 : suivi de l'archiviste (administrateur)
-    suivis: async () => (await fb.getDocs(fb.collection(db, 'suivi'))).docs.map(d => JSON.parse(d.data().d)),
+    // 02/11/2026 (audit UX, G5) : chaque dossier garde l'heure de sa dernière écriture par HQ (champ maj du document)
+    suivis: async () => (await fb.getDocs(fb.collection(db, 'suivi'))).docs.map(d => ({...JSON.parse(d.data().d), maj: d.data().maj || ''})),
   };
 }
-let devRetours = [], devChoix = null, devDepots = [];
+let devRetours = [], devChoix = null, devDepots = [], devValidation = {};
 async function sourceDev() {   // données locales pour essayer l'interface sans Firebase
   const idx = await (await fetch('dev/arbres/index.json')).json();
   const comptes = {};
@@ -101,6 +107,9 @@ async function sourceDev() {   // données locales pour essayer l'interface sans
     ajouterRetour: async (id, r) => { const x = {...r, id: 'r' + Date.now(), auteur: user.email, cree: new Date().toISOString(), statut: 'ouvert'}; devRetours.push(x); return x.id; },
     majRetour: async () => {}, supprimerRetour: async (id, rid) => { devRetours = devRetours.filter(x => x.id !== rid); },
     ouvrirRelecture: async () => {},
+    validation: async id => devValidation[id] || null,
+    valider: async (id, version) => { devValidation[id] = {par: user.email, quand: new Date().toISOString(), version}; },
+    pdf: async (id, n, progres) => { const out = []; for (let k = 0; k < n; k++) { out.push(await (await fetch(`dev/pdf/${id}/${k}.txt`)).text()); if (progres) progres(k + 1, n); } return out; },
     ouvrirOrientationClient: async () => {},
     proposition: async id => { try { return await (await fetch(`dev/proposition/${id}.json`)).json(); } catch (e) { return null; } },
     choix: async () => devChoix, tousChoix: async () => devChoix ? [{email: user.email, ...devChoix}] : [],
@@ -233,19 +242,25 @@ async function accueil() {
   const c = await S.compte(email);
   if (!vuComme) U.prenom = c.prenom || '';
   const metas = (await Promise.all((c.arbres || []).map(id => S.meta(id).catch(() => null)))).filter(Boolean);
+  // 02/11/2026 (D1) : un bon à tirer validé donne le PDF, même si la relecture a été refermée
+  await Promise.all(metas.filter(m => m.livre && m.livre.etape === 'bat').map(async m => { m.validation = await S.validation(m.id).catch(() => null); }));
   const relire = m => m.livre && (m.relecture || U.admin);
   const orienter = m => m.orientation || (U.admin && m.proposition);
-  if (metas.length === 1 && !vuComme && !relire(metas[0]) && !orienter(metas[0])) return ouvrirArbre(metas[0].id, 'client');
+  const pdfPret = m => m.validation && m.livre && m.livre.pdf && m.livre.pdf.morceaux > 0;
+  const libRelire = m => m.livre && m.livre.etape === 'bat' ? (m.validation ? 'Revoir le livre validé' : 'Relire le bon à tirer') : m.livre && m.livre.etape === 'premier_jet' ? 'Feuilleter le premier jet' : 'Relire le livre';
+  if (metas.length === 1 && !vuComme && !relire(metas[0]) && !orienter(metas[0]) && !pdfPret(metas[0])) return ouvrirArbre(metas[0].id, 'client');
   document.title = 'Vos livres · Vos Racines';
   $app.innerHTML = barre() + `<main class="page"><h1>Vos livres</h1>
     ${metas.length ? `<div class="grille">${metas.map(m => `<article class="livre"><h2>${esc(m.titre)}</h2><p class="st">${esc(m.sous_titre || '')}</p>
       <div class="chiffres"><div><b>${m.n_ancetres || 0}</b><span>ancêtres</span></div><div><b>${m.n_personnes || 0}</b><span>personnes</span></div><div><b>${m.generations || 0}</b><span>générations</span></div></div>
-      <div class="rangee"><button class="btn btn-1" data-o="${esc(m.id)}">Ouvrir l’arbre</button>${orienter(m) ? `<button class="btn btn-2" data-orienter="${esc(m.id)}">Orienter mon livre</button>` : ''}${relire(m) ? `<button class="btn" data-relire="${esc(m.id)}">Relire le livre</button>` : ''}</div>
+      <div class="rangee"><button class="btn btn-1" data-o="${esc(m.id)}">Ouvrir l’arbre</button>${orienter(m) ? `<button class="btn btn-2" data-orienter="${esc(m.id)}">Orienter mon livre</button>` : ''}${relire(m) ? `<button class="btn" data-relire="${esc(m.id)}">${libRelire(m)}</button>` : ''}${pdfPret(m) ? `<button class="btn btn-1" data-pdf="${esc(m.id)}">Télécharger le livre (PDF)</button>` : ''}</div>
+      ${m.validation ? `<p class="maj">Validé pour l’impression le ${esc(dateFr(m.validation.quand))}.</p>` : ''}
       <p class="maj">Mis à jour le ${esc(dateFr(m.maj))}</p></article>`).join('')}</div>`
     : `<p>Votre arbre n’est pas encore en ligne. Nous vous écrirons dès qu’il le sera. Une question ? <a href="mailto:${CONTACT}">${CONTACT}</a></p>`}</main>`;
   brancherBarre();
   $app.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ouvrirArbre(b.dataset.o, 'client'));
   $app.querySelectorAll('[data-relire]').forEach(b => b.onclick = () => relecture(metas.find(m => m.id === b.dataset.relire), false));
+  $app.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => telechargerPdf(metas.find(m => m.id === b.dataset.pdf), S, b));
   $app.querySelectorAll('[data-orienter]').forEach(b => b.onclick = () => orientation(metas.find(m => m.id === b.dataset.orienter), false));
 }
 async function orientation(meta, admin) {
@@ -302,6 +317,8 @@ async function pageAdmin(onglet) {
   if (onglet === 'arbres') onglet = 'clients';
   document.title = 'Administration · Vos Racines';
   const [arbres, comptes, suivis] = await Promise.all([S.tousArbres(), S.comptes(), S.suivis ? S.suivis().catch(() => []) : []]);
+  // 02/11/2026 (D1) : étape du livre et validation du bon à tirer, visibles dans l'onglet Clients
+  await Promise.all(arbres.filter(a => a.livre && a.livre.etape === 'bat').map(async a => { a.validation = await S.validation(a.id).catch(() => null); }));
   // un client = toutes ses adresses (comptes de l'espace, adresses des commandes), regroupées par boîte réelle
   const G = new Map();
   const groupe = e => { const k = cleEmail(e); if (!G.has(k)) G.set(k, {cle: k, emails: new Set(), arbres: new Set(), noms: new Set(), commandes: []}); return G.get(k); };
@@ -319,7 +336,7 @@ async function pageAdmin(onglet) {
   const titre = id => (arbres.find(a => a.id === id) || {}).titre || id;
   const boutonsArbre = a => `<div class="rangee"><button class="btn btn-1" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button><button class="btn" data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.proposition ? `<button class="btn" data-or="${esc(a.id)}">Orientation${a.orientation ? ' (ouverte)' : ''}</button>` : ''}${a.livre ? `<button class="btn" data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}</div>`;
   const ligneArbre = (id, c) => { const a = arbres.find(x => x.id === id); if (!a) return ''; const ouvert = !c || (a.lecteurs || []).some(e => cleEmail(e) === c.cle);
-    return `<li class="adm-arbre"><div><b>${esc(a.titre)}</b> <span class="petit">${esc(a.sous_titre || '')} · ${a.n_ancetres || 0} ancêtres${a.maj ? ' · ' + esc(new Date(a.maj).toLocaleDateString('fr-FR')) : ''}${ouvert ? '' : ' · <i>pas encore ouvert à ce client</i>'}</span></div>${boutonsArbre(a)}</li>`; };
+    return `<li class="adm-arbre"><div><b>${esc(a.titre)}</b> <span class="petit">${esc(a.sous_titre || '')} · ${a.n_ancetres || 0} ancêtres${a.maj ? ' · ' + esc(new Date(a.maj).toLocaleDateString('fr-FR')) : ''}${ouvert ? '' : ' · <i>pas encore ouvert à ce client</i>'}</span>${a.livre ? `<div class="petit etat-livre${a.validation ? ' valide' : ''}">Livre : ${esc(etatLivre(a))}</div>` : ''}</div>${boutonsArbre(a)}</li>`; };
   $app.innerHTML = barre() + `<main class="page large"><div class="admin">
     <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button></nav>
     <section>${onglet === 'archiviste' ? `<h1>Archiviste</h1><div id="suivi"></div>` : `<h1>Clients</h1>

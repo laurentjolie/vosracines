@@ -2,6 +2,7 @@
 // 1. Administrations : toutes les demandes d'actes, ce qui a été répondu, ce qui est en attente ou à faire à la main.
 // 2. Clients : toute la discussion avec chaque client, et ce qu'il a choisi ou commenté dans l'espace (orientation, relecture, dépôts).
 // Données : suivi/{ref} (écrit par HQ, suivi.py, toutes les 10 minutes) ; choix, retours et dépôts lus dans arbres/{id}.
+import {etatLivre} from './relecture.js';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ST = {acte: ['Acte reçu', 'ok'], reponse: ['Réponse reçue', 'rep'], attente: ['En attente', 'att'], main: ['À faire à la main', 'main'], ecartee: ['Non envoyée', 'off']};
 const ORDRE = ['main', 'attente', 'reponse', 'acte', 'ecartee'];
@@ -50,7 +51,9 @@ export async function ouvrirSuivi(el, S, arbres, opt = {}) {
     const visibles = lignes.filter(x => (!filtre || x.statut === filtre) && (!cmd || x.s.ref === cmd))
       .sort((a, b) => ORDRE.indexOf(a.statut) - ORDRE.indexOf(b.statut) || String(b.t).localeCompare(String(a.t)));
     const autres = suivis.flatMap(s => (s.autres || []).map(a => ({...a, s})));
-    c.innerHTML = `<p class="petit">Les demandes de copies d'actes envoyées par l'archiviste aux mairies et aux services d'archives, et ce qu'ils ont répondu. Mis à jour toutes les dix minutes.</p>
+    // 02/11/2026 (audit UX, G5) : l'heure du dernier changement reçu de HQ (suivi.py n'écrit un dossier que s'il a changé)
+    const majHQ = suivis.map(s => String(s.maj || '')).sort().pop() || '';
+    c.innerHTML = `<p class="petit">Les demandes de copies d'actes envoyées par l'archiviste aux mairies et aux services d'archives, et ce qu'ils ont répondu. HQ vérifie toutes les dix minutes${majHQ ? ` ; dernier changement reçu le <b>${esc(heure(majHQ))}</b>` : ''}.</p>
       <div class="sv-chips">${ORDRE.map(k => `<button class="sv-chip sv-${ST[k][1]}" aria-pressed="${filtre === k}" data-f="${k}">${ST[k][0]} <b>${compte[k]}</b></button>`).join('')}
         <label class="cache-visuel" for="sv-cmd">Commande</label><select id="sv-cmd"><option value="">Toutes les commandes</option>${suivis.filter(s => (s.demandes || []).length).map(s => `<option value="${esc(s.ref)}" ${cmd === s.ref ? 'selected' : ''}>${esc(s.client)}${s.pour ? ' pour ' + esc(s.pour) : ''}</option>`).join('')}</select></div>
       ${visibles.length ? `<ul class="sv-dem">${visibles.map(x => `<li class="sv-d">
@@ -95,9 +98,11 @@ export async function ouvrirSuivi(el, S, arbres, opt = {}) {
     const blocs = [];
     for (const id of s.arbres || []) {
       const a = arbres.find(x => x.id === id) || {id, titre: id};
-      const [P, choix, retours, depots] = await Promise.all([S.proposition(id).catch(() => null), S.tousChoix(id).catch(() => []), S.retours(id).catch(() => []), S.mesDepots(id).catch(() => [])]);
+      const [P, choix, retours, depots, val] = await Promise.all([S.proposition(id).catch(() => null), S.tousChoix(id).catch(() => []), S.retours(id).catch(() => []), S.mesDepots(id).catch(() => []),
+        a.livre && a.livre.etape === 'bat' && S.validation ? S.validation(id).catch(() => null) : null]);
       blocs.push(`<div class="sv-arbre"><h4>${esc(a.titre)}</h4>
-        <p class="petit">Orientation ${a.orientation ? 'ouverte' : 'fermée'} · Relecture ${a.relecture ? 'ouverte' : 'fermée'}${a.livre && a.livre.version ? ` · livre ${esc(a.livre.version)}` : ''}</p>
+        <p class="petit">Orientation ${a.orientation ? 'ouverte' : 'fermée'} · Relecture ${a.relecture ? 'ouverte' : 'fermée'}</p>
+        ${a.livre ? `<p class="petit etat-livre${val ? ' valide' : ''}">Livre : ${esc(etatLivre({...a, validation: val}))}</p>` : ''}
         ${choix.length ? choix.map(ch => carteChoix(ch, P)).join('') : '<p class="petit">Aucun choix enregistré.</p>'}
         ${retours.length ? `<h5>Commentaires de relecture (${retours.length})</h5><ul class="sv-ret">${retours.sort((x, y) => (x.page || 0) - (y.page || 0)).map(r => `<li><b>Page ${esc(r.page)}</b> · ${esc({correction: 'Correction', ambiance: 'Ambiance, ton', creuser: 'À creuser'}[r.genre] || r.genre || '')} · ${esc(r.auteur)} · ${esc(heure(r.cree))}${r.statut ? ` · <i>${esc(r.statut)}</i>` : ''}${r.citation ? `<blockquote>${esc(r.citation)}</blockquote>` : ''}<div>${esc(r.texte)}</div></li>`).join('')}</ul>` : ''}
         ${depots.length ? `<h5>Documents déposés (${depots.length})</h5><ul class="sv-ret">${depots.map(d => `<li>${esc(d.nom)} <span class="petit">(${esc(d.usage || '')}${d.note ? ', ' + esc(d.note) : ''}) · ${esc(d.auteur)} · ${esc(heure(d.cree && d.cree.toDate ? d.cree.toDate().toISOString() : d.cree))}</span></li>`).join('')}</ul>` : ''}</div>`);
