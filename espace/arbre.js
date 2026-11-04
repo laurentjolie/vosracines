@@ -251,9 +251,10 @@ export function creerArbre(racineEl, data, opt = {}) {
   const legVue = (() => { try { return localStorage.getItem('vr-legende'); } catch (e) { return null; } })();
   // 02/11/2026 (audit UX, D1) : légende ouverte à la première visite, repliée ensuite (le choix est mémorisé).
   // Sur téléphone elle couvrirait presque tout l'arbre : elle y reste repliée, la bulle d'aide suffit.
-  if (legVue || innerWidth < 720) { legBtn.setAttribute('aria-expanded', 'false'); leg.querySelector('.corps').hidden = true; }
+  legBtn.title = 'Fermer la légende';
+  if (legVue || innerWidth < 720) { legBtn.title = 'Afficher la légende'; legBtn.setAttribute('aria-expanded', 'false'); leg.querySelector('.corps').hidden = true; }
   if (!legVue && innerWidth >= 720) { try { localStorage.setItem('vr-legende', '1'); } catch (e) {} }
-  legBtn.addEventListener('click', () => { const o = legBtn.getAttribute('aria-expanded') === 'true'; legBtn.setAttribute('aria-expanded', String(!o)); leg.querySelector('.corps').hidden = o; try { localStorage.setItem('vr-legende', '1'); } catch (e) {} });
+  legBtn.addEventListener('click', () => { const o = legBtn.getAttribute('aria-expanded') === 'true'; legBtn.setAttribute('aria-expanded', String(!o)); legBtn.title = o ? 'Afficher la légende' : 'Fermer la légende'; leg.querySelector('.corps').hidden = o; try { localStorage.setItem('vr-legende', '1'); } catch (e) {} });
   addEventListener('keydown', e => {
     if (e.target.matches('input')) { if (e.key === 'Escape') e.target.blur(); return; }
     if (e.key === 'Escape') fermerFiche();
