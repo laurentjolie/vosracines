@@ -169,7 +169,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     for (const n of L.plusBtns) html += `<button class="plus" data-plus="${esc(n.id)}" style="left:${n.cx - 75}px;top:${n.y - 52}px">+ ${PLUS} générations</button>`;
     if (L.desc.length) {
       const foc = positions[focus];
-      html += `<span class="titre-enfants" style="left:${foc.cx}px;top:${foc.y + h + 20}px">Ses enfants</span>`;
+      html += `<span class="titre-enfants" style="left:${foc.cx}px;top:${foc.y + h + 20}px">${L.desc.length === 1 ? 'Parmi ses enfants' : 'Ses enfants'}</span>`;
       for (const d of L.desc) { html += carteHTML(d.id, d.x, d.y, 'desc'); const L = lienDe(P[d.id]); paths += `<path d="M${foc.cx} ${foc.y + h} V${foc.y + h + 14} M${d.x + w / 2} ${d.y} V${d.y - 10} H${foc.cx}" stroke="var(--line-strong)" stroke-width="${L.w}" ${L.d ? `stroke-dasharray="${L.d}"` : ''} fill="none"/>`; }
     }
     svg.innerHTML = paths; cartesEl.innerHTML = html;
@@ -305,7 +305,7 @@ export function creerArbre(racineEl, data, opt = {}) {
       ${(p.so || []).length ? `<h3>${(p.ra || []).length ? 'Autres notes de recherche' : 'Sources et actes lus'} (${p.so.length})</h3><ul class="sources">${p.so.map(x => { const pv = preuve(x.niv); return `<li>${pv ? `<span class="pv ${pv[1]}" title="${esc(pv[2])}">${pv[0]}</span>` : '<span class="pv"></span>'}<div>${x.ev ? `<b>${esc(x.ev.charAt(0).toUpperCase() + x.ev.slice(1))}</b> · ` : ''}${pv ? `<span class="niv">${esc(pv[2])}</span>` : ''}<p>${esc(x.t)}</p>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Voir sur le site des archives</a>` : ''}${opt.admin && x.l ? `<small>dossier de recherche, ligne ${x.l}</small>` : ''}</div></li>`; }).join('')}</ul>` : ''}
       ${(p.ac || []).length ? `<h3>Ses actes reproduits (${p.ac.length})</h3><div class="liens actes">${p.ac.map(i => data.actes[i]).filter(Boolean).map((a, j) => `<button data-acte="${p.ac[j]}"><b>${esc(a.titre)}</b><small>${esc(a.ref)}</small></button>`).join('')}</div>` : ''}
       ${pa && (P[pa.h] || P[pa.w]) ? `<h3>Ses parents</h3><div class="liens">${[pa.h, pa.w].filter(z => P[z]).map(lien).join('')}</div>` : ''}
-      ${ks.length ? `<h3>Ses enfants</h3><div class="liens">${ks.map(lien).join('')}</div>` : ''}
+      ${ks.length ? `<h3>${ks.length === 1 ? 'Parmi ses enfants' : 'Ses enfants'}</h3><div class="liens">${ks.map(lien).join('')}</div>` : ''}
       ${avDe(id).length ? `<h3>Recherches à valider (admin, ${avDe(id).length})</h3><div class="liens actes">${avDe(id).map(([x, j]) => `<button data-av="${j}"><span><b>${esc(x.t)}</b><small>${esc([x.lib, x.f + ', ligne ' + x.l].filter(Boolean).join(' · '))}</small></span></button>`).join('')}</div>` : ''}
       ${opt.admin && (p.no || (p.src && p.src.length)) ? `<h3>Notes de recherche (admin)</h3><div class="note">${esc(p.no || '')}${p.src && p.src.length ? '\nSources : ' + esc(p.src.join(', ')) : ''}</div>` : ''}
       <div class="actions"><button class="btn btn-1" data-recentrer="${esc(id)}">Voir son arbre</button></div></div>`;
