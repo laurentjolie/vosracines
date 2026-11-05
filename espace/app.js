@@ -10,7 +10,7 @@ const $app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const params = new URLSearchParams(location.search);
 const DEV = params.get('dev');   // ?dev=client ou ?dev=admin : données locales (./dev/arbres), sans Firebase
-const LOGO = `<a class="logo" href="./"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#F1E1C4"/><path d="M32 10v26M32 36c-8 0-14 6-16 14M32 36c8 0 14 6 16 14M32 36v16M24 24c4 2 6 6 8 12M40 24c-4 2-6 6-8 12" stroke="#5A3A22" stroke-width="3" fill="none" stroke-linecap="round"/></svg><span>Vos Racines</span></a>`;
+const LOGO = `<a class="logo" href="./"><img src="../img/sceau-simple.svg" alt=""><span>Vos Racines</span></a>`;
 const lire = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const ecrire = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
 

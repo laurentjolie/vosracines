@@ -38,7 +38,7 @@ section{padding-block:76px}
 .night .rub{color:var(--gold)}
 header.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:20px}
 .logo{display:flex;align-items:center;gap:12px;text-decoration:none;line-height:1}
-.logo .mk{width:30px;height:30px;flex:none}
+.logo .mk{width:auto;height:48px;flex:none}
 .logo b{display:block;font-weight:500;font-size:27px}
 .logo small{display:block;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--on-night-soft);margin-top:5px}
 .hero{display:grid;grid-template-columns:1fr 1.05fr;gap:48px;align-items:center;padding-block:36px 72px}
@@ -262,7 +262,7 @@ dialog.loupe button{display:block;margin:10px auto 0;min-height:48px;padding:0 2
 @media (max-width:720px){.cta-mobile{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:#F1E1C4;border-top:1px solid #D9C8AC;transform:translateY(110%);transition:transform .25s}
   .cta-mobile.voir{transform:none}.cta-mobile .btn{width:100%;justify-content:center}}
 </style>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cellipse cx=%2232%22 cy=%2232%22 rx=%2225%22 ry=%2229.5%22 fill=%22%23FBF6EC%22 stroke=%22%232E2117%22 stroke-width=%224%22/%3E%3Cpath d=%22M32 37V25M32 30L23 21M32 28L41 20M32 25V15%22 stroke=%22%232E2117%22 stroke-width=%223.6%22 stroke-linecap=%22round%22 fill=%22none%22/%3E%3Cg fill=%22%232E2117%22%3E%3Ccircle cx=%2221%22 cy=%2219%22 r=%225%22/%3E%3Ccircle cx=%2243%22 cy=%2218%22 r=%225%22/%3E%3Ccircle cx=%2232%22 cy=%2213%22 r=%225.5%22/%3E%3Ccircle cx=%2226%22 cy=%2215%22 r=%223.5%22/%3E%3Ccircle cx=%2238%22 cy=%2214%22 r=%223.5%22/%3E%3C/g%3E%3Cpath d=%22M15 37H49%22 stroke=%22%232E2117%22 stroke-width=%222.4%22 stroke-linecap=%22round%22/%3E%3Cpath d=%22M32 41C29 37 22 37 22 43C22 48 28 50 32 55C36 50 42 48 42 43C42 37 35 37 32 41Z%22 fill=%22none%22 stroke=%22%23A8441E%22 stroke-width=%223.6%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Vos Racines, le livre de votre famille">
 <meta property="og:description" content="Un livre qui raconte sa famille : les ancêtres retrouvés dans les registres, leurs actes, leurs villages, leurs métiers.">
 </head><body>
@@ -270,7 +270,7 @@ dialog.loupe button{display:block;margin:10px auto 0;min-height:48px;padding:0 2
   <div class="wrap">
     <header class="top">
       <a class="logo" href="#top" aria-label="Vos Racines, accueil">
-        <svg class="mk" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 4v10M15 14c-4 3-8 4-11 8M15 14c4 3 8 4 11 8M15 14c-1 5-3 9-6 12M15 14c1 5 3 9 6 12" fill="none" stroke="#A8441E" stroke-width="1.5" stroke-linecap="round"/><path d="M15 2l2.2 2.2L15 6.4l-2.2-2.2z" fill="#E3A93F"/></svg>
+        <img class="mk" src="img/sceau-simple.svg" alt="">
         <span><b>Vos Racines</b><small>Le livre de votre famille</small></span>
       </a>
       <nav class="nav-haut"><a class="espace" href="espace/">Votre espace</a><a class="btn ghost" href="#offrir">Offrir</a></nav>
