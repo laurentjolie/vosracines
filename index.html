@@ -250,6 +250,8 @@ footer.night .rub{color:var(--honey)}
 <style>
 /* Audit retenu 29/10/2026 */
 .lancement{display:inline-block;font:600 12px var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);border:1px solid currentColor;border-radius:999px;padding:3px 10px;margin:8px 0 4px}
+.bandeau-noel{display:block;text-align:center;background:#A8441E;color:#FFF8EC;font:500 15px var(--f-ui);padding:9px 16px;text-decoration:none}
+.bandeau-noel u{text-underline-offset:3px;margin-left:6px}
 .prix-clair{margin-top:14px;font:16px var(--f-ui);color:var(--ink-soft);max-width:44ch}
 .steps .n{font:600 22px var(--f-ui);letter-spacing:0;color:var(--rubric)}
 .qui{background:var(--paper)}
@@ -266,6 +268,7 @@ dialog.loupe button{display:block;margin:10px auto 0;min-height:48px;padding:0 2
 <meta property="og:title" content="Vos Racines, le livre de votre famille">
 <meta property="og:description" content="Un livre qui raconte sa famille : les ancêtres retrouvés dans les registres, leurs actes, leurs villages, leurs métiers.">
 </head><body>
+<a class="bandeau-noel" href="#commande" id="lien-noel">Noël : offrez l’histoire de leur famille. La carte cadeau tout de suite, sous le sapin ; le livre ensuite. <u>Offrir</u></a>
 <div class="night">
   <div class="wrap">
     <header class="top">
@@ -439,6 +442,7 @@ dialog.loupe button{display:block;margin:10px auto 0;min-height:48px;padding:0 2
             <fieldset class="pq"><legend>Ce livre est</legend><label><input type="radio" name="pourqui" value="moi" checked><span>Pour moi</span></label><label><input type="radio" name="pourqui" value="offrir"><span>À offrir</span></label></fieldset>
           </div>
           <fieldset class="pq" id="quibloc" hidden><legend>Qui nous donnera les premiers renseignements sur la famille ?*</legend><label><input type="radio" name="qui" value="moi" checked><span>Moi, qui l'offre</span></label><label><input type="radio" name="qui" value="dest"><span>La personne qui le reçoit</span></label></fieldset>
+          <fieldset class="pq" id="quandbloc" hidden><legend>Quand l’offrez-vous ?</legend><label><input type="radio" name="quand" value="noel" checked><span>À Noël</span></label><label><input type="radio" name="quand" value="now"><span>Tout de suite</span></label></fieldset>
           <div id="destbloc" hidden>
             <label for="dprenom">Son prénom<input id="dprenom" name="dprenom" type="text" autocomplete="off"></label>
             <label for="demail">Son e-mail<input id="demail" name="demail" type="email" autocomplete="off"></label>
@@ -513,23 +517,29 @@ var STRIPE = { livre: 'https://buy.stripe.com/28EcN686f7xI7NCarbgYU00', livre_do
   });
   function pq(){return document.querySelector('input[name=pourqui]:checked').value;}
   function qui(){var p=pq();if(p==='offrir')return document.querySelector('input[name=qui]:checked').value;return 'moi';}
-  function pcode(){var p=pq();if(p==='offrir'&&qui()==='dest'&&document.getElementById('surprise').checked)return 'carte';return p;}
+  function noel(){return pq()==='offrir'&&document.querySelector('input[name=quand]:checked').value==='noel';}
+  function pcode(){var p=pq();if(p==='offrir'&&!noel()&&qui()==='dest'&&document.getElementById('surprise').checked)return 'carte';return p;}
   function v(id){return (document.getElementById(id).value||'').trim();}
   function lab(name,val){var i=document.querySelector('input[name='+name+'][value='+val+']');return i?i.parentNode.textContent:'';}
   var NOTE={
     moi:"C'est votre propre famille : rien d'autre à préciser : notre archiviste vous écrit par mail juste après.",
     offrir_moi:"Vous nous racontez la famille, en secret : le livre reste une surprise.",
     offrir_dest:"Nous écrirons à cette personne pour construire son livre avec elle. Vous serez en copie de nos échanges ; le livre ne sera donc plus une surprise.",
+    noel_moi:"Vous recevez tout de suite une carte cadeau à imprimer, à glisser sous le sapin. Vous nous racontez la famille dès maintenant, en secret.",
+    noel_dest:"Vous recevez tout de suite une carte cadeau à imprimer, à glisser sous le sapin. Nous n'écrirons à cette personne qu'à partir du 26 décembre ; vous serez en copie.",
     carte:"Notre archiviste écrira à cette personne pour lui poser quelques questions sur sa famille, sans lui dévoiler la nature du cadeau. Vous serez en copie."};
   function maj(){
     var p=pq(), q=qui();
     document.getElementById('quibloc').hidden=(p!=='offrir');
     document.getElementById('destbloc').hidden=(q!=='dest');
+    document.getElementById('quandbloc').hidden=(p!=='offrir');
+    document.getElementById('surprise').parentNode.hidden=noel();
     document.getElementById('asterisque').hidden=(p!=='offrir');
-    var c=pcode();document.getElementById('pqnote').textContent=NOTE[c==='carte'?'carte':(p==='offrir'?'offrir_'+q:p)];
+    var c=pcode();document.getElementById('pqnote').textContent=NOTE[noel()?'noel_'+q:(c==='carte'?'carte':(p==='offrir'?'offrir_'+q:p))];
   }
-  Array.prototype.forEach.call(document.querySelectorAll('input[name=pourqui],input[name=qui],#surprise'),function(r){r.addEventListener('change',maj);});
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=pourqui],input[name=qui],input[name=quand],#surprise'),function(r){r.addEventListener('change',maj);});
   maj();
+  document.getElementById('lien-noel').addEventListener('click',function(){document.querySelector('input[name=pourqui][value=offrir]').checked=true;document.querySelector('input[name=quand][value=noel]').checked=true;maj();});
   function b64url(str){var b=new TextEncoder().encode(str),bin='';b.forEach(function(x){bin+=String.fromCharCode(x);});return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
   var RE=/^[^@\s]+@[^@\s]+\.[^@\s]+$/;
   var dos={checked:false,addEventListener:function(){}};
@@ -546,7 +556,7 @@ var STRIPE = { livre: 'https://buy.stripe.com/28EcN686f7xI7NCarbgYU00', livre_do
     if(!RE.test(email))return oups("Il nous faut votre adresse e-mail.",'email');
     if(q==='dest'&&de.toLowerCase()===email.toLowerCase())return oups("Les deux adresses sont identiques : si c'est pour vous, choisissez « Pour moi ».",'demail');
     err.hidden=true;
-    var data={v:1,p:p,q:q};if(q==='dest'){data.n=dp.slice(0,40);data.e=de;}
+    var data={v:1,p:p,q:q};if(q==='dest'){data.n=dp.slice(0,40);data.e=de;}if(noel())data.d='noel';
     var ref=b64url(JSON.stringify(data)); if(ref.length>200){delete data.n;ref=b64url(JSON.stringify(data));}
     var link=dos.checked?STRIPE.livre_dossier:STRIPE.livre;
     try{localStorage.setItem('vr_commande',JSON.stringify({t:Date.now(),p:p,q:q,n:data.n||'',e:data.e||''}));}catch(_){}
