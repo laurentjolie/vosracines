@@ -286,8 +286,13 @@ export function creerArbre(racineEl, data, opt = {}) {
   function voirActe(p, ev, e) {
     const T = {naissance: ['Naissance', 'Baptême'], 'baptême': ['Baptême', 'Naissance'], 'décès': ['Décès', 'Sépulture'], mariage: ['Mariage']}[ev] || [];
     const c = (p.ra || []).map(([i]) => i).filter(i => R && R[i] && T.includes(R[i].ty) && R[i].img);
+    const an4 = x => String(x || '').slice(0, 4);
+    if (e && !c.length && e.d) {   // pas d'acte de cet événement, mais une mention marginale dans un autre acte lu (ex. mariage noté en marge de la naissance)
+      const m = (p.ra || []).map(([i]) => i).find(i => R && R[i] && R[i].img && R[i].ty !== T[0] && String(R[i].tr || '').includes(an4(e.d)));
+      return m ? ` <button class="btn-lien voir-acte" data-reg="${esc(m)}">Voir la mention (${esc(String(R[m].ty || 'acte').toLowerCase())})</button>` : '';
+    }
     if (!e || !c.length) return '';
-    const an4 = x => String(x || '').slice(0, 4), best = c.find(i => e.d && an4(R[i].d) === an4(e.d)) || c[0];
+    const best = c.find(i => e.d && an4(R[i].d) === an4(e.d)) || c[0];
     return ` <button class="btn-lien voir-acte" data-reg="${esc(best)}">Voir l’acte</button>`;
   }
   function dou(p, ev, e) {
