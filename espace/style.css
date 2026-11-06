@@ -512,3 +512,4 @@ details.sv-rep p,details.sv-rep .sv-txt{white-space:pre-wrap;background:var(--bg
 /* 06/11 : le bouton Fermer ne chevauche plus le nom ; « d'où ça vient » sous les faits non prouvés */
 .fiche .contenu>h2{padding-right:104px}
 .evts .pq{display:block;font-size:.86em;color:var(--ink-soft);margin-top:2px;line-height:1.35}
+.evts .voir-acte{font-weight:600;margin-left:6px;white-space:nowrap}
