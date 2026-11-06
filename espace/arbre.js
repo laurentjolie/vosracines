@@ -403,11 +403,9 @@ export function creerArbre(racineEl, data, opt = {}) {
       ${a.img ? '<div class="acte-img"><span class="petit">Chargement de l’image…</span></div>' : lienArchives}
       ${a.pr ? `<h3>Ce que ce document établit</h3><p>${esc(a.pr)}</p>` : ''}
       ${a.tr ? `<h3>Ce qu’on y lit</h3><div class="acte-texte">« ${esc(a.tr)} »</div>` : ''}
-      <h3>Où le trouver</h3><p class="acte-ref">${esc(ouTrouver || 'Source non précisée')}</p>
+      ${ouTrouver ? `<h3>Où le trouver</h3><p class="acte-ref">${esc(ouTrouver)}</p>` : ''}
       ${a.u && a.img ? `<p><a href="${esc(a.u)}" target="_blank" rel="noopener noreferrer">Voir sur le site des archives</a></p>` : ''}
       ${qui.length ? `<h3>Dans ce document</h3><div class="liens">${qui.map(z => `<button data-voir="${esc(z)}">${esc(nomComplet(P[z]))}</button>`).join('')}</div>` : ''}
-      ${opt.admin && a.lec ? `<h3>Notes de lecture (admin)</h3><div class="note">${esc(a.lec)}</div>` : ''}
-      ${opt.admin && a.fi ? `<p class="petit">Fichier ${esc(a.fi)}${a.nsour > 1 ? `, cité ${a.nsour} fois dans l’arbre` : ''}</p>` : ''}
       ${opt.admin && (a.ln || []).length ? `<p class="petit">Dossier de recherche, ligne${a.ln.length > 1 ? 's' : ''} ${a.ln.join(', ')}</p>` : ''}</div>`;
     av.hidden = false; av.querySelector('.fermer').onclick = retour || fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
     av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
