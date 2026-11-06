@@ -508,3 +508,7 @@ details.sv-rep p,details.sv-rep .sv-txt{white-space:pre-wrap;background:var(--bg
 .legende>button{display:flex;align-items:center;gap:8px}
 .legende>button::after{content:'▴';margin-left:auto;font-size:15px;color:var(--ink-soft);flex:none}
 .legende>button[aria-expanded="true"]::after{content:'✕';font-size:16px;width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;color:var(--ink)}
+
+/* 06/11 : le bouton Fermer ne chevauche plus le nom ; « d'où ça vient » sous les faits non prouvés */
+.fiche .contenu>h2{padding-right:104px}
+.evts .pq{display:block;font-size:.86em;color:var(--ink-soft);margin-top:2px;line-height:1.35}

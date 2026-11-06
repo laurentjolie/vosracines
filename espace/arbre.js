@@ -275,10 +275,18 @@ export function creerArbre(racineEl, data, opt = {}) {
   }
 
   // ---------- fiche ----------
-  function evt(lib, e, extra = '') {
+  function evt(lib, e, extra = '', pq = '') {
     if (!e) return '';
     const pv = preuve(e.niv), quand = dateLongue(e.d), ou = e.p ? ` à ${esc(lieuCourt(e.p))}` : '';
-    return `<li><span class="pv ${pv ? pv[1] : ''}" title="${pv ? esc(pv[2] + ' : ' + pv[3]) : ''}">${pv ? pv[0] : ''}</span><span>${lib} ${quand ? (/^\d{4}$/.test(e.d) ? 'en ' : 'le ') + esc(quand) : ''}${ou}${extra}${pv ? `<span class="src">${esc(pv[2])}</span>` : ''}</span></li>`;
+    return `<li><span class="pv ${pv ? pv[1] : ''}" title="${pv ? esc(pv[2] + ' : ' + pv[3]) : ''}">${pv ? pv[0] : ''}</span><span>${lib} ${quand ? (/^\d{4}$/.test(e.d) ? 'en ' : 'le ') + esc(quand) : ''}${ou}${extra}${pv ? `<span class="src">${esc(pv[2])}</span>` : ''}${pq}</span></li>`;
+  }
+  // 06/11/2026 (Laurent) : toute supposition dit d'où elle vient. Sous un fait qui n'est pas prouvé par un acte lu,
+  // la source notée pour cet événement ; à défaut, on le dit franchement.
+  function dou(p, ev, e) {
+    if (!e || e.niv === 'acte' || e.niv === 'famille') return '';
+    const s = (p.so || []).find(x => x.ev === ev);
+    if (s) return `<span class="pq">D’où ça vient : ${esc(s.t)}${s.url ? ` <a href="${esc(s.url)}" target="_blank" rel="noopener">voir</a>` : ''}</span>`;
+    return `<span class="pq">${(p.so || []).length || (p.ra || []).length ? 'D’où ça vient : voir les sources plus bas, aucune n’est rattachée à cet événement précis.' : 'Aucune source notée pour ce fait : il vient d’un arbre reconstitué, c’est une piste à vérifier.'}</span>`;
   }
   function ouvrirFiche(id) {
     const p = P[id]; if (!p || p.cache) return;
@@ -287,7 +295,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     const f = p.s === 'F', l = lignee(p), e = f ? 'e' : '';
     const unis = (unions[id] || []).map(u => {
       const autre = P[u.h === id ? u.w : u.h];
-      return evt(`Marié${e}`, u.mar || (autre ? {} : null), autre ? ` avec <button class="btn-lien" data-voir="${esc(u.h === id ? u.w : u.h)}">${esc(nomComplet(autre))}</button>` : '');
+      return evt(`Marié${e}`, u.mar || (autre ? {} : null), autre ? ` avec <button class="btn-lien" data-voir="${esc(u.h === id ? u.w : u.h)}">${esc(nomComplet(autre))}</button>` : '', dou(p, 'mariage', u.mar));
     }).join('');
     const pa = parents[id], ks = [...new Set(enfants[id] || [])].filter(z => P[z]);
     const lien = z => `<button data-voir="${esc(z)}">${esc(nomComplet(P[z]))}${P[z].cache ? '' : ` <small>${esc([an(P[z].na) || an(P[z].ba), an(P[z].de)].filter(Boolean).join(' · '))}</small>`}</button>`;
@@ -299,7 +307,7 @@ export function creerArbre(racineEl, data, opt = {}) {
       <p class="parente">${esc(id === ego ? 'C’est la personne de ce livre.' : parente(p, egoNom) || 'Famille')}${p.fam ? ' · Informations transmises par la famille' : ''}</p>
       ${pv ? `<p><span class="${pv[1]}">${pv[0]}</span> <b>${esc(pv[2])}</b> : ${esc(pv[3])}</p>` : ''}
       ${pa && (P[pa.h] || P[pa.w]) ? `<p class="lien-niv"><svg width="44" height="10" aria-hidden="true"><path d="M2 5 H42" stroke="var(--ink-soft)" stroke-width="${lienDe(p).w}" stroke-linecap="round" ${lienDe(p).d ? `stroke-dasharray="${lienDe(p).d}"` : ''}/></svg><span>Lien avec ses parents : <b>${esc(LIBNL[nivLien(p)] || 'non vérifié')}</b> <button class="btn-lien" data-pourquoi="${esc(id)}">Pourquoi ?</button></span></p>` : ''}
-      <ul class="evts">${evt(`Né${e}`, p.na)}${!p.na ? evt(`Baptisé${e}`, p.ba) : ''}${unis}${evt(`Décédé${e}`, p.de)}</ul>
+      <ul class="evts">${evt(`Né${e}`, p.na, '', dou(p, 'naissance', p.na))}${!p.na ? evt(`Baptisé${e}`, p.ba, '', dou(p, 'baptême', p.ba)) : ''}${unis}${evt(`Décédé${e}`, p.de, '', dou(p, 'décès', p.de))}</ul>
       ${p.me && p.me.length ? `<h3>Métier${p.me.length > 1 ? 's' : ''}</h3><p>${p.me.map(m => { const [x, y] = met(m); return esc(x) + (y ? ` (${esc(y)})` : ''); }).join(', ')}</p>` : ''}
       ${p.pep ? `<div class="pep-bloc"><h3>✦ Pourquoi c’est une pépite</h3>${(p.pep.r || []).length ? `<p class="pep-r">${p.pep.r.map(r => `<span>${esc(r)}</span>`).join('')}</p>` : ''}${(p.pep.x || []).map(t => `<p>${esc(t)}</p>`).join('')}</div>` : ''}
       ${(p.ra || []).length ? `<h3>Actes et documents consultés (${p.ra.length})</h3><div class="liens actes registre">${triRa(p.ra).map(([i, r]) => { const a = R[i]; const pv = preuve(a.niv); return `<button data-reg="${esc(i)}"><span class="pv ${pv ? pv[1] : ''}">${pv ? pv[0] : ''}</span><span><b>${esc(a.t || a.ty)}</b><small>${esc([NIVR[a.nv] || (pv && pv[2]), r && r !== 'sujet' && r !== 'défunt' ? 'comme ' + r : ''].filter(Boolean).join(' · '))}</small></span></button>`; }).join('')}</div>` : ''}
