@@ -13,8 +13,25 @@ const domaine = a => String(a || '').split('@').pop().replace(/[<>]/g, '');
 // le corps d'un mail, sans l'historique cité (« Le sam. 17 oct. … a écrit : » et les lignes « > »)
 function sansCitation(t) {
   const L = String(t || '').split('\n'); const out = [];
-  for (const l of L) { if (/^\s*>/.test(l) || /^(Le|On) .{6,120}(a écrit|wrote)\s*:?\s*$/.test(l.trim()) || /^-{2,} ?(Original|Message d'origine)/i.test(l.trim())) break; out.push(l); }
+  for (let i = 0; i < L.length; i++) {
+    const l = L[i].trim(), deux = (l + ' ' + (L[i + 1] || '').trim()).trim();
+    // 09/11 : « Le lun. 9 nov. 2026 à 08:20, L'archiviste <\narchiviste@…> a écrit : » tient souvent sur deux lignes
+    if (/^\s*>/.test(L[i]) || /^(Le|On) .{6,160}(a écrit|wrote)\s*:?\s*$/.test(l) || (/^(Le|On) /.test(l) && /^(Le|On) .{6,200}(a écrit|wrote)\s*:?\s*$/.test(deux))
+        || /^-{2,} ?(Original|Message d'origine)/i.test(l) || /^(De|From) ?:/.test(l) && /^(Envoy|Sent|Date)/.test((L[i + 1] || '').trim())) break;
+    out.push(L[i]);
+  }
   return out.join('\n').trim();
+}
+// 09/11 (Laurent : « mise en page convenable ») : les messageries des clients coupent les lignes vers 72 caractères ;
+// on recolle une ligne à la suivante quand elle est longue et ne finit pas une phrase, sans toucher aux listes ni aux paragraphes
+function deplier(t) {
+  const L = String(t || '').replace(/\r/g, '').split('\n'); const out = [];
+  for (const l of L) {
+    const p = out.length ? out[out.length - 1] : null;
+    if (p !== null && p.length >= 55 && l.trim() && !/[.!?:;]\s*$/.test(p) && !/^\s*([-*•–]|\d+[.)]|[A-ZÉÈ][a-zé]+ ?:)/.test(l)) out[out.length - 1] = p.replace(/\s+$/, '') + ' ' + l.trim();
+    else out.push(l);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
 export async function ouvrirSuivi(el, S, arbres, opt = {}) {
@@ -82,16 +99,25 @@ export async function ouvrirSuivi(el, S, arbres, opt = {}) {
     const g = clientsG.find(x => x.cle === choisi) || clientsG[0];
     const f = c.querySelector('#sv-fil');
     if (!g) { f.innerHTML = '<p>Aucun client.</p>'; return; }
-    f.innerHTML = `<h2 class="sv-h2">${esc(g.nom)}</h2><p class="petit">${g.emails.map(esc).join(' · ')}</p>` + g.dossiers.map((s, i) => `<div class="sv-dossier" id="sv-d${i}"></div>`).join('');
-    g.dossiers.forEach((s, i) => fil(f.querySelector('#sv-d' + i), s, g.dossiers.length > 1));
+    // 09/11 (Laurent : « les mails dans l'ordre ») : un client à plusieurs commandes avait un fil par commande, le plus récent
+    // en premier ; désormais l'espace par commande, puis UNE discussion, tous les messages par ordre chronologique
+    const plusieurs = g.dossiers.length > 1;
+    const msgs = g.dossiers.flatMap(s => (s.discussion || []).map(m => ({...m, dos: s.horsCmd ? '' : (s.titre || 'commande …' + (s.court || '')) + (s.pour ? ' pour ' + s.pour : '')})))
+      .sort((a, b) => String(a.t).localeCompare(String(b.t)));
+    f.innerHTML = `<h2 class="sv-h2">${esc(g.nom)}</h2><p class="petit">${g.emails.map(esc).join(' · ')}</p>` + g.dossiers.map((s, i) => `<div class="sv-dossier" id="sv-d${i}"></div>`).join('')
+      + (g.dossiers.every(s => s.horsCmd) ? '' : `<section><h3 class="sv-h3">Discussion avec l'archiviste${plusieurs ? ' (toutes les commandes, dans l\'ordre)' : ''}</h3>${msgs.length ? `<ol class="sv-msgs">${msgs.map(m => {
+        const t = m.sens === 'entrant' ? deplier(sansCitation(m.texte)) : sansCitation(m.texte), complet = String(m.texte || '').trim();
+        return `<li class="sv-m sv-${m.sens === 'entrant' ? 'in' : m.sens === 'note' ? 'note' : 'out'}"><div class="sv-tete"><b>${m.sens === 'entrant' ? esc(m.de || 'Client') : m.sens === 'note' ? 'Note' : 'Archiviste'}</b> · ${esc(heure(m.t))}${plusieurs && m.dos ? ' · <i>' + esc(m.dos) + '</i>' : ''}${m.essai ? ' · <i>essai, non envoyé</i>' : ''}</div>
+          ${m.sujet ? `<div class="sv-suj">${esc(m.sujet)}</div>` : ''}<div class="sv-txt">${esc(t)}</div>${complet.length > t.length + 20 ? `<details class="sv-rep"><summary>Message complet, avec l'historique cité</summary><div class="sv-txt">${esc(complet)}</div></details>` : ''}</li>`; }).join('')}</ol>` : '<p class="petit">Aucun échange.</p>'}</section>`);
+    g.dossiers.forEach((s, i) => fil(f.querySelector('#sv-d' + i), s, plusieurs, true));
   }
 
-  async function fil(f, s, plusieurs) {
+  async function fil(f, s, plusieurs, sansDiscussion) {
     const nomDossier = s.horsCmd ? s.titre : `${s.titre ? esc(s.titre) : 'Commande'}${s.pour ? ' pour ' + esc(s.pour) : ''} <span class="petit">· commande …${esc(s.court || '')}</span>`;
     f.innerHTML = `${plusieurs ? `<h3 class="sv-dos">${s.horsCmd ? esc(nomDossier) : nomDossier}</h3>` : ''}
       <section><h3 class="sv-h3">Dans l'espace : choix, relecture, documents</h3><div id="sv-esp"><p class="petit">Chargement…</p></div></section>
-      ${s.horsCmd ? '' : `<section><h3 class="sv-h3">Discussion avec l'archiviste</h3>${(s.discussion || []).length ? `<ol class="sv-msgs">${s.discussion.map(m => {
-        const t = sansCitation(m.texte), complet = String(m.texte || '').trim();
+      ${s.horsCmd || sansDiscussion ? '' : `<section><h3 class="sv-h3">Discussion avec l'archiviste</h3>${(s.discussion || []).length ? `<ol class="sv-msgs">${s.discussion.map(m => {
+        const t = m.sens === 'entrant' ? deplier(sansCitation(m.texte)) : sansCitation(m.texte), complet = String(m.texte || '').trim();
         return `<li class="sv-m sv-${m.sens === 'entrant' ? 'in' : m.sens === 'note' ? 'note' : 'out'}"><div class="sv-tete"><b>${m.sens === 'entrant' ? esc(m.de || 'Client') : m.sens === 'note' ? 'Note' : 'Archiviste'}</b> · ${esc(heure(m.t))}${m.essai ? ' · <i>essai, non envoyé</i>' : ''}</div>
           ${m.sujet ? `<div class="sv-suj">${esc(m.sujet)}</div>` : ''}<div class="sv-txt">${esc(t)}</div>${complet.length > t.length + 20 ? `<details class="sv-rep"><summary>Message complet, avec l'historique cité</summary><div class="sv-txt">${esc(complet)}</div></details>` : ''}</li>`; }).join('')}</ol>` : '<p class="petit">Aucun échange.</p>'}</section>`}`;
     const esp = f.querySelector('#sv-esp');
