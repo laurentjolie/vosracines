@@ -513,3 +513,8 @@ details.sv-rep p,details.sv-rep .sv-txt{white-space:pre-wrap;background:var(--bg
 .fiche .contenu>h2{padding-right:104px}
 .evts .pq{display:block;font-size:.86em;color:var(--ink-soft);margin-top:2px;line-height:1.35}
 .evts .voir-acte{font-weight:600;margin-left:6px;white-space:nowrap}
+/* 09/11/2026 : partage de l'arbre par lien */
+.bandeau-partage{font-size:15px}
+.partage ul{padding-left:20px;line-height:1.5}
+.partage #pt-lien{flex:1;min-width:0;min-height:44px;font:15px var(--f-ui);padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}
+.pt-liste{list-style:none;padding:0}.pt-liste li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}

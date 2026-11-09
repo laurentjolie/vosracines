@@ -15,6 +15,12 @@ const lire = k => { try { return localStorage.getItem(k); } catch (e) { return n
 const ecrire = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
 
 // ---------------------------------------------------------------- source de données
+// 09/11/2026 : ce qu'un lien de partage montre : les personnes et les familles de la version client, sans actes ni registre
+function allege(x) {
+  const P = {};
+  for (const [k, p] of Object.entries(x.personnes || {})) { const q = {...p}; delete q.ac; delete q.no; delete q.src; P[k] = q; }
+  return {personnes: P, familles: x.familles || []};
+}
 let S;   // {connexion, onUtilisateur, demanderLien, entrerParLien, estLien, compte, arbres, arbre, comptes, majCompte, sortir}
 async function sourceFirebase() {
   const fb = await import('./vendor/firebase.js');
@@ -80,6 +86,30 @@ async function sourceFirebase() {
     supprimerDepot: (id, did) => fb.deleteDoc(fb.doc(db, 'arbres', id, 'depots', did)),
     // 02/11 : suivi de l'archiviste (administrateur)
     // 02/11/2026 (audit UX, G5) : chaque dossier garde l'heure de sa dernière écriture par HQ (champ maj du document)
+    // 09/11/2026 (retour de Benjamin) : partage de l'arbre par un lien, sans compte, sans le livre ni les actes
+    partager: async (meta, jours = 30) => {
+      const a = new Uint8Array(18); crypto.getRandomValues(a);
+      const j = Array.from(a, x => x.toString(16).padStart(2, '0')).join('');
+      const qs = await fb.getDocs(fb.collection(db, 'arbres', meta.id, 'client'));
+      const morceaux = qs.docs.sort((x, y) => +x.id - +y.id).map(d => { let x = d.data(); if (typeof x.d === 'string') x = JSON.parse(x.d); return allege(x); });
+      await fb.setDoc(fb.doc(db, 'partages', j), {arbre: meta.id, par: U.email, titre: meta.titre || '', sous_titre: meta.sous_titre || '', cree: fb.serverTimestamp(),
+        expire: new Date(Date.now() + jours * 86400000), morceaux: morceaux.length});
+      for (const [k, x] of morceaux.entries()) await fb.setDoc(fb.doc(db, 'partages', j, 'client', String(k)), {d: JSON.stringify(x)});
+      return j;
+    },
+    mesPartages: async id => (await fb.getDocs(fb.query(fb.collection(db, 'partages'), fb.where('par', '==', U.email)))).docs
+      .map(d => ({j: d.id, ...d.data()})).filter(x => x.arbre === id && x.expire && x.expire.toDate() > new Date()),
+    arreterPartage: async j => {
+      for (const d of (await fb.getDocs(fb.collection(db, 'partages', j, 'client'))).docs) await fb.deleteDoc(d.ref);
+      await fb.deleteDoc(fb.doc(db, 'partages', j));
+    },
+    partage: async j => {
+      const p = await fb.getDoc(fb.doc(db, 'partages', j)); if (!p.exists()) return null;
+      const m = p.data(), out = {personnes: {}, familles: [], actes: [], registre: {}, a_valider: []};
+      (await fb.getDocs(fb.collection(db, 'partages', j, 'client'))).docs.sort((a, b) => +a.id - +b.id)
+        .forEach(d => { const x = JSON.parse(d.data().d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); });
+      return {...out, titre: m.titre, sous_titre: m.sous_titre, expire: m.expire && m.expire.toDate(), racine: '@1'};
+    },
     suivis: async () => (await fb.getDocs(fb.collection(db, 'suivi'))).docs.map(d => ({...JSON.parse(d.data().d), maj: d.data().maj || ''})),
   };
 }
@@ -253,7 +283,7 @@ async function accueil() {
   $app.innerHTML = barre() + `<main class="page"><h1>Vos livres</h1>
     ${metas.length ? `<div class="grille">${metas.map(m => `<article class="livre"><h2>${esc(m.titre)}</h2><p class="st">${esc(m.sous_titre || '')}</p>
       <div class="chiffres"><div><b>${m.n_ancetres || 0}</b><span>ancêtres</span></div><div><b>${m.n_personnes || 0}</b><span>personnes</span></div><div><b>${m.generations || 0}</b><span>générations</span></div></div>
-      <div class="rangee"><button class="btn btn-1" data-o="${esc(m.id)}">Ouvrir l’arbre</button>${orienter(m) ? `<button class="btn btn-2" data-orienter="${esc(m.id)}">Orienter mon livre</button>` : ''}${relire(m) ? `<button class="btn" data-relire="${esc(m.id)}">${libRelire(m)}</button>` : ''}${pdfPret(m) ? `<button class="btn btn-1" data-pdf="${esc(m.id)}">Télécharger le livre (PDF)</button>` : ''}</div>
+      <div class="rangee"><button class="btn btn-1" data-o="${esc(m.id)}">Ouvrir l’arbre</button>${!vuComme ? `<button class="btn" data-partager="${esc(m.id)}">Partager l’arbre</button>` : ''}${orienter(m) ? `<button class="btn btn-2" data-orienter="${esc(m.id)}">Orienter mon livre</button>` : ''}${relire(m) ? `<button class="btn" data-relire="${esc(m.id)}">${libRelire(m)}</button>` : ''}${pdfPret(m) ? `<button class="btn btn-1" data-pdf="${esc(m.id)}">Télécharger le livre (PDF)</button>` : ''}</div>
       ${m.validation ? `<p class="maj">Validé pour l’impression le ${esc(dateFr(m.validation.quand))}.</p>` : ''}
       <p class="maj">Mis à jour le ${esc(dateFr(m.maj))}</p></article>`).join('')}</div>`
     : `<p>Votre arbre n’est pas encore en ligne. Nous vous écrirons dès qu’il le sera. Une question ? <a href="mailto:${CONTACT}">${CONTACT}</a></p>`}</main>`;
@@ -262,6 +292,45 @@ async function accueil() {
   $app.querySelectorAll('[data-relire]').forEach(b => b.onclick = () => relecture(metas.find(m => m.id === b.dataset.relire), false));
   $app.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => telechargerPdf(metas.find(m => m.id === b.dataset.pdf), S, b));
   $app.querySelectorAll('[data-orienter]').forEach(b => b.onclick = () => orientation(metas.find(m => m.id === b.dataset.orienter), false));
+  $app.querySelectorAll('[data-partager]').forEach(b => b.onclick = () => pagePartage(metas.find(m => m.id === b.dataset.partager)));
+}
+
+// 09/11/2026 (retour de Benjamin : « cela m'aurait été utile de pouvoir partager l'arbre pour demander une vérification ») :
+// un lien en lecture seule, sans compte, valable 30 jours, sans le livre ni les actes ; arrêt possible à tout moment.
+async function pagePartage(meta) {
+  arbreActif = {id: meta.id, version: 'partage'};
+  document.title = `Partager ${meta.titre} · Vos Racines`;
+  const lienDe = j => `${location.origin}${location.pathname}?partage=${j}`;
+  const rendre = async (nouveau = '') => {
+    const liste = await S.mesPartages(meta.id).catch(() => []);
+    $app.innerHTML = barre(meta.titre) + `<main class="page partage"><h1>Partager l’arbre</h1>
+      <p>Pour faire vérifier les premières générations par un proche, envoyez-lui un lien : il verra l’arbre en lecture seule, sans créer de compte.</p>
+      <ul class="petit"><li>Le lien montre l’arbre seulement : ni le livre, ni les actes, ni vos choix.</li><li>Les personnes vivantes y apparaissent comme dans votre espace, sans date ni lieu.</li><li>Toute personne qui a le lien peut voir l’arbre pendant 30 jours ; vous pouvez l’arrêter quand vous voulez.</li>${meta.livre ? '<li>Si le livre est une surprise, choisissez bien à qui vous envoyez le lien : le titre de l’arbre s’affiche.</li>' : ''}</ul>
+      ${nouveau ? `<div class="note"><label for="pt-lien"><b>Votre lien</b></label><div class="rangee"><input id="pt-lien" readonly value="${esc(lienDe(nouveau))}"><button class="btn btn-1" id="pt-copier">Copier le lien</button></div></div>` : ''}
+      <div class="rangee"><button class="btn${nouveau ? '' : ' btn-1'}" id="pt-creer">Créer un lien de partage</button><button class="btn" id="pt-retour">Retour à mes livres</button></div>
+      ${liste.length ? `<h2>Liens en cours</h2><ul class="pt-liste">${liste.map(x => `<li><code>…${esc(x.j.slice(-6))}</code> · valable jusqu’au ${esc(dateFr(x.expire.toDate()))} <button class="btn" data-copier="${esc(x.j)}">Copier</button> <button class="btn" data-arreter="${esc(x.j)}">Arrêter ce partage</button></li>`).join('')}</ul>` : ''}</main>`;
+    brancherBarre();
+    $app.querySelector('#pt-retour').onclick = () => accueil();
+    $app.querySelector('#pt-creer').onclick = async e => { e.target.disabled = true; e.target.textContent = 'Création du lien…';
+      try { rendre(await S.partager(meta)); } catch (x) { console.error(x); e.target.disabled = false; e.target.textContent = 'Le lien n’a pas pu être créé, réessayer'; } };
+    const copier = async (t, b) => { try { await navigator.clipboard.writeText(t); b.textContent = 'Copié'; } catch (x) { const i = $app.querySelector('#pt-lien'); if (i) i.select(); } };
+    const c = $app.querySelector('#pt-copier'); if (c) c.onclick = () => copier(lienDe(nouveau), c);
+    $app.querySelectorAll('[data-copier]').forEach(b => b.onclick = () => copier(lienDe(b.dataset.copier), b));
+    $app.querySelectorAll('[data-arreter]').forEach(b => b.onclick = async () => { b.disabled = true; await S.arreterPartage(b.dataset.arreter); rendre(); });
+  };
+  rendre();
+}
+
+// Page publique d'un lien de partage : pas de connexion, l'arbre en lecture seule
+async function ouvrirPartage(j) {
+  $app.innerHTML = '<div class="chargement">Chargement de l’arbre…</div>';
+  let d = null;
+  try { d = await S.partage(j); } catch (e) { console.error(e); }
+  if (!d) { $app.innerHTML = `<main class="porte"><div class="carte-porte">${LOGO}<h1>Ce lien n’est plus valable</h1><p>Le partage a été arrêté ou a expiré. Demandez un nouveau lien à la personne qui vous l’a envoyé.</p></div></main>`; return; }
+  document.title = `${d.titre} · Vos Racines`;
+  $app.innerHTML = `<header class="barre">${LOGO}<span class="titre-livre">${esc(d.titre)}</span></header>
+    <div class="bandeau-admin bandeau-partage">Arbre partagé en lecture seule${d.expire ? `, jusqu’au ${esc(dateFr(d.expire))}` : ''}. Réalisé par <a href="https://vosracines.fr" target="_blank" rel="noopener">Vos Racines</a>.</div><div id="arbre"></div>`;
+  creerArbre(document.getElementById('arbre'), d, {admin: false, image: null, partage: true});
 }
 async function orientation(meta, admin) {
   arbreActif = {id: meta.id, version: 'orientation'};
@@ -387,6 +456,7 @@ async function pageAdmin(onglet) {
 (async () => {
   try { S = DEV ? await sourceDev() : await sourceFirebase(); }
   catch (e) { console.error(e); $app.innerHTML = `<main class="porte"><div class="carte-porte">${LOGO}<h1>Un souci technique</h1><p>L’espace est momentanément indisponible. Réessayez dans quelques minutes, ou écrivez-nous à <a href="mailto:${CONTACT}">${CONTACT}</a>.</p></div></main>`; return; }
+  if (params.get('partage')) return ouvrirPartage(params.get('partage'));
   if (S.estLien()) { ecranEntrer(); }
   let premier = true;
   S.onUtilisateur(u => {

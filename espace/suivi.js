@@ -28,7 +28,7 @@ function deplier(t) {
   const L = String(t || '').replace(/\r/g, '').split('\n'); const out = [];
   for (const l of L) {
     const p = out.length ? out[out.length - 1] : null;
-    if (p !== null && p.length >= 55 && l.trim() && !/[.!?:;]\s*$/.test(p) && !/^\s*([-*•–]|\d+[.)]|[A-ZÉÈ][a-zé]+ ?:)/.test(l)) out[out.length - 1] = p.replace(/\s+$/, '') + ' ' + l.trim();
+    if (p !== null && p.length >= 55 && p.length <= 80 && l.trim() && !/[.!?:;]\s*$/.test(p) && !/^\s*([-*•–]|\d+[.)]|[A-ZÉÈ][a-zé]+ ?:)/.test(l)) out[out.length - 1] = p.replace(/\s+$/, '') + ' ' + l.trim();
     else out.push(l);
   }
   return out.join('\n').replace(/\n{3,}/g, '\n\n');
