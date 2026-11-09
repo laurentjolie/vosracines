@@ -111,6 +111,14 @@ async function sourceFirebase() {
       return {...out, titre: m.titre, sous_titre: m.sous_titre, expire: m.expire && m.expire.toDate(), racine: '@1'};
     },
     suivis: async () => (await fb.getDocs(fb.collection(db, 'suivi'))).docs.map(d => ({...JSON.parse(d.data().d), maj: d.data().maj || ''})),
+    // 09/11 : une pièce jointe de mail (pj/{id}, morceaux base64) rendue en Blob
+    pj: async id => {
+      const m = await fb.getDoc(fb.doc(db, 'pj', id)); if (!m.exists()) throw new Error('pièce pas encore publiée par HQ (dix minutes au plus)');
+      const x = m.data(), qs = await fb.getDocs(fb.collection(db, 'pj', id, 'm'));
+      const b64 = qs.docs.sort((a, b) => +a.id - +b.id).map(d => d.data().d).join('');
+      const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      return {...x, blob: new Blob([u], {type: x.type || 'application/octet-stream'})};
+    },
   };
 }
 let devRetours = [], devChoix = null, devDepots = [], devValidation = {};

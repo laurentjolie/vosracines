@@ -23,15 +23,34 @@ function sansCitation(t) {
   return out.join('\n').trim();
 }
 // 09/11 (Laurent : « mise en page convenable ») : les messageries des clients coupent les lignes vers 72 caractères ;
-// on recolle une ligne à la suivante quand elle est longue et ne finit pas une phrase, sans toucher aux listes ni aux paragraphes
+// on recolle une ligne à la suivante seulement si elle a la longueur d'une ligne coupée (62 à 80) et ne finit pas une phrase,
+// et jamais devant une liste ni une ligne « Étiquette : valeur » (« Grand-mère paternelle : … »)
 function deplier(t) {
   const L = String(t || '').replace(/\r/g, '').split('\n'); const out = [];
   for (const l of L) {
     const p = out.length ? out[out.length - 1] : null;
-    if (p !== null && p.length >= 55 && p.length <= 80 && l.trim() && !/[.!?:;]\s*$/.test(p) && !/^\s*([-*•–]|\d+[.)]|[A-ZÉÈ][a-zé]+ ?:)/.test(l)) out[out.length - 1] = p.replace(/\s+$/, '') + ' ' + l.trim();
+    if (p !== null && p.length >= 62 && p.length <= 80 && l.trim() && !/[.!?:;,)]\s*$/.test(p)
+        && !/^\s*([-*•–]|\d+[.)]|[^\s:]{1,30}( [^\s:]{1,20}){0,3} ?:\s)/.test(l)) out[out.length - 1] = p.replace(/\s+$/, '') + ' ' + l.trim();
     else out.push(l);
   }
-  return out.join('\n').replace(/\n{3,}/g, '\n\n');
+  return out.join('\n');
+}
+// 09/11 (Laurent : « pas la peine de garder les anciens messages dans mes messages ») : on ne garde que ce que la personne a écrit,
+// sans historique cité, sans signature de messagerie (« Envoyé de mon iPhone »), sans images internes [cid:…] ni doublons <mailto:…>
+function nettoyer(t, client) {
+  let s = sansCitation(t).replace(/\r/g, '');
+  s = s.replace(/\[cid:[^\]]*\]/g, '').replace(/<mailto:[^>]*>/g, '').replace(/<(https?:[^>]+)>/g, '');
+  s = s.replace(/\n(-- ?|_{6,})\n[\s\S]*$/, '');   // signature après le séparateur « -- » ou une ligne de soulignés
+  s = s.replace(/\n\s*(Envoy[ée] (de|depuis) mon .{2,40}|Sent from .{2,60}|Get Outlook for .{2,30}|Télécharger Outlook pour .{2,30})\s*$/i, '');
+  if (client) s = deplier(s);
+  return s.split('\n').map(l => l.replace(/[ \t ]+$/, '')).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+const objet = s => String(s || '').replace(/^\s*((re|tr|fwd?|réf)\s*:\s*)+/i, '').trim().toLowerCase();
+const icoPj = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l9.2-9.2a3.7 3.7 0 015.2 5.2l-9.2 9.2a1.8 1.8 0 01-2.6-2.6l8.5-8.5"/></svg>';
+function puces(pj) {
+  return (pj || []).length ? `<div class="sv-pjs">${pj.map(p => p.id && !p.lourd
+    ? `<button class="sv-pj" data-pj="${esc(p.id)}" data-nom="${esc(p.nom)}">${icoPj}<span>${esc(p.nom)}</span><small>${p.ko >= 1024 ? (p.ko / 1024).toFixed(1).replace('.', ',') + ' Mo' : p.ko + ' Ko'}</small></button>`
+    : `<span class="sv-pj sv-pj-off" title="${p.lourd ? 'Trop lourde pour l\'aperçu : elle est sur HQ' : 'Fichier envoyé depuis HQ, non conservé ici'}">${icoPj}<span>${esc(p.nom)}</span></span>`).join('')}</div>` : '';
 }
 
 export async function ouvrirSuivi(el, S, arbres, opt = {}) {
@@ -79,47 +98,82 @@ export async function ouvrirSuivi(el, S, arbres, opt = {}) {
           <div class="petit">${esc(x.commune || '')}${x.courriel ? ` · ${esc(x.courriel)}` : ''} · demandé le ${esc(jour(x.t))} · <i>${esc(x.s.client)}${x.s.pour ? ' pour ' + esc(x.s.pour) : ''}</i></div>
           ${x.statut === 'main' ? `<div class="sv-note">Pas d'adresse électronique trouvée pour cette mairie : demande à faire sur son site ou par courrier.</div>` : ''}
           ${x.statut === 'ecartee' ? `<div class="sv-note">${esc(x.etat)}</div>` : ''}
-          ${(x.reponses || []).map(r => `<details class="sv-rep"><summary>Réponse du ${esc(heure(r.t))} (${esc(domaine(r.de))})${r.pieces ? ` · ${r.pieces} pièce${r.pieces > 1 ? 's' : ''} jointe${r.pieces > 1 ? 's' : ''}` : ''}</summary><p>${esc(sansCitation(r.texte)) || '<i>(sans texte)</i>'}</p></details>`).join('')}
+          ${(x.reponses || []).map(r => `<details class="sv-rep"><summary>Réponse du ${esc(heure(r.t))} (${esc(domaine(r.de))})${r.pieces ? ` · ${r.pieces} pièce${r.pieces > 1 ? 's' : ''} jointe${r.pieces > 1 ? 's' : ''}` : ''}</summary><p>${esc(nettoyer(r.texte)) || '<i>(sans texte)</i>'}</p>${puces(r.pj)}</details>`).join('')}
           ${(x.pieces || []).length ? `<div class="petit">Pièces reçues : ${x.pieces.map(esc).join(', ')}</div>` : ''}
           ${x.raison ? `<details class="sv-rep"><summary>Pourquoi cette demande</summary><p>${esc(x.raison)}</p></details>` : ''}
         </div></li>`).join('')}</ul>` : '<p>Aucune demande dans cette sélection.</p>'}
-      ${autres.length && !filtre ? `<h2 class="sv-h2">Réponses non rattachées à une demande</h2><ul class="sv-dem">${autres.filter(a => !cmd || a.s.ref === cmd).map(a => `<li class="sv-d"><span class="sv-badge sv-off">À classer</span><div class="sv-quoi"><b>${esc(a.sujet || '(sans objet)')}</b><div class="petit">${esc(a.de)} · ${esc(heure(a.t))} · <i>${esc(a.s.client)}</i></div><details class="sv-rep"><summary>Lire</summary><p>${esc(sansCitation(a.texte))}</p></details></div></li>`).join('')}</ul>` : ''}`;
+      ${autres.length && !filtre ? `<h2 class="sv-h2">Réponses non rattachées à une demande</h2><ul class="sv-dem">${autres.filter(a => !cmd || a.s.ref === cmd).map(a => `<li class="sv-d"><span class="sv-badge sv-off">À classer</span><div class="sv-quoi"><b>${esc(a.sujet || '(sans objet)')}</b><div class="petit">${esc(a.de)} · ${esc(heure(a.t))} · <i>${esc(a.s.client)}</i></div><details class="sv-rep"><summary>Lire</summary><p>${esc(nettoyer(a.texte))}</p>${puces(a.pj)}</details></div></li>`).join('')}</ul>` : ''}`;
     c.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filtre = filtre === b.dataset.f ? '' : b.dataset.f; administrations(c); });
     c.querySelector('#sv-cmd').onchange = e => { cmd = e.target.value; administrations(c); };
+    brancherPj(c);
   }
 
+  // 09/11 (Laurent : « une belle passe d'amélioration ») : liste des clients fixe à gauche, ceux sans échange regroupés en bas ;
+  // à droite la discussion d'abord (l'espace replié au-dessus), un message par carte, l'objet seulement quand il change,
+  // les longs messages repliés, les pièces jointes ouvrables
   function clients(c) {
-    c.innerHTML = `<div class="sv-cli">
-      <nav class="sv-liste" aria-label="Clients">${clientsG.map(g => { const n = g.dossiers.reduce((t, s) => t + (s.discussion || []).length, 0);
-        return `<button data-c="${esc(g.cle)}" aria-current="${choisi === g.cle}"><b>${esc(g.nom)}</b>
+    const nb = g => g.dossiers.reduce((t, s) => t + (s.discussion || []).length, 0);
+    const btn = g => { const n = nb(g); return `<button data-c="${esc(g.cle)}" aria-current="${choisi === g.cle}"><b>${esc(g.nom)}</b>
         <span class="petit">${g.dossiers.map(s => esc(s.horsCmd ? s.titre : (s.titre || 'commande …' + (s.court || '')))).join(' · ')}</span>
-        <span class="petit">${n} message${n > 1 ? 's' : ''}${g.dernier ? ' · ' + esc(jour(g.dernier)) : ''}</span></button>`; }).join('')}</nav>
+        ${n ? `<span class="petit">${n} message${n > 1 ? 's' : ''}${g.dernier ? ' · ' + esc(jour(g.dernier)) : ''}</span>` : ''}</button>`; };
+    const avec = clientsG.filter(g => nb(g)), sans = clientsG.filter(g => !nb(g));
+    c.innerHTML = `<div class="sv-cli">
+      <nav class="sv-liste" aria-label="Clients">${avec.map(btn).join('')}${sans.length ? `<p class="sv-sans">Sans échange de mails</p>${sans.map(btn).join('')}` : ''}</nav>
       <div class="sv-fil" id="sv-fil"></div></div>`;
     c.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { choisi = b.dataset.c; clients(c); c.querySelector('#sv-fil').scrollIntoView({behavior: 'smooth', block: 'start'}); });
     const g = clientsG.find(x => x.cle === choisi) || clientsG[0];
     const f = c.querySelector('#sv-fil');
     if (!g) { f.innerHTML = '<p>Aucun client.</p>'; return; }
-    // 09/11 (Laurent : « les mails dans l'ordre ») : un client à plusieurs commandes avait un fil par commande, le plus récent
-    // en premier ; désormais l'espace par commande, puis UNE discussion, tous les messages par ordre chronologique
     const plusieurs = g.dossiers.length > 1;
     const msgs = g.dossiers.flatMap(s => (s.discussion || []).map(m => ({...m, dos: s.horsCmd ? '' : (s.titre || 'commande …' + (s.court || '')) + (s.pour ? ' pour ' + s.pour : '')})))
       .sort((a, b) => String(a.t).localeCompare(String(b.t)));
-    f.innerHTML = `<h2 class="sv-h2">${esc(g.nom)}</h2><p class="petit">${g.emails.map(esc).join(' · ')}</p>` + g.dossiers.map((s, i) => `<div class="sv-dossier" id="sv-d${i}"></div>`).join('')
-      + (g.dossiers.every(s => s.horsCmd) ? '' : `<section><h3 class="sv-h3">Discussion avec l'archiviste${plusieurs ? ' (toutes les commandes, dans l\'ordre)' : ''}</h3>${msgs.length ? `<ol class="sv-msgs">${msgs.map(m => {
-        const t = m.sens === 'entrant' ? deplier(sansCitation(m.texte)) : sansCitation(m.texte), complet = String(m.texte || '').trim();
-        return `<li class="sv-m sv-${m.sens === 'entrant' ? 'in' : m.sens === 'note' ? 'note' : 'out'}"><div class="sv-tete"><b>${m.sens === 'entrant' ? esc(m.de || 'Client') : m.sens === 'note' ? 'Note' : 'Archiviste'}</b> · ${esc(heure(m.t))}${plusieurs && m.dos ? ' · <i>' + esc(m.dos) + '</i>' : ''}${m.essai ? ' · <i>essai, non envoyé</i>' : ''}</div>
-          ${m.sujet ? `<div class="sv-suj">${esc(m.sujet)}</div>` : ''}<div class="sv-txt">${esc(t)}</div>${complet.length > t.length + 20 ? `<details class="sv-rep"><summary>Message complet, avec l'historique cité</summary><div class="sv-txt">${esc(complet)}</div></details>` : ''}</li>`; }).join('')}</ol>` : '<p class="petit">Aucun échange.</p>'}</section>`);
+    const prenom = String(g.nom || '').split(/\s|@/)[0];
+    let precedent = '';
+    const cartes = msgs.map((m, i) => {
+      const cli = m.sens === 'entrant', t = nettoyer(m.texte, cli), o = objet(m.sujet), sujet = m.sujet && o !== precedent ? m.sujet : '';
+      if (o) precedent = o;
+      const qui = cli ? (prenom || m.de || 'Client') : m.sens === 'note' ? 'Note' : 'Archiviste';
+      const long = t.length > 1200 || t.split('\n').length > 22;
+      return `<li class="sv-m sv-${cli ? 'in' : m.sens === 'note' ? 'note' : 'out'}" id="sv-m${i}">
+        <div class="sv-tete"><span class="sv-qui">${esc(qui)}</span>${cli && m.de ? `<span class="sv-adr">${esc(m.de)}</span>` : ''}<time>${esc(heure(m.t))}</time></div>
+        ${plusieurs && m.dos ? `<div class="sv-dosm">${esc(m.dos)}</div>` : ''}${m.essai ? '<div class="sv-dosm">essai, non envoyé</div>' : ''}
+        ${sujet ? `<div class="sv-suj">${esc(sujet)}</div>` : ''}
+        <div class="sv-txt${long ? ' sv-long' : ''}">${esc(t) || '<i>(sans texte)</i>'}</div>${long ? '<button class="sv-plus" type="button">Lire la suite</button>' : ''}
+        ${puces(m.pj)}</li>`;
+    });
+    f.innerHTML = `<div class="sv-entete"><div><h2 class="sv-h2">${esc(g.nom)}</h2><p class="petit">${g.emails.map(esc).join(' · ')}</p></div>
+        ${msgs.length > 3 ? '<button class="sv-dernier" type="button">Dernier message ↓</button>' : ''}</div>
+      <details class="sv-espace"><summary>Dans l'espace : choix, relecture, documents</summary>${g.dossiers.map((s, i) => `<div class="sv-dossier" id="sv-d${i}"></div>`).join('')}</details>
+      ${g.dossiers.every(s => s.horsCmd) ? '' : `<section><h3 class="sv-h3">Discussion${plusieurs ? ' (toutes les commandes, dans l\'ordre)' : ''} · ${msgs.length} message${msgs.length > 1 ? 's' : ''}</h3>
+        ${msgs.length ? `<ol class="sv-msgs">${cartes.join('')}</ol>` : '<p class="petit">Aucun échange.</p>'}</section>`}`;
+    const dern = f.querySelector('.sv-dernier'); if (dern) dern.onclick = () => f.querySelector('#sv-m' + (msgs.length - 1)).scrollIntoView({behavior: 'smooth', block: 'start'});
+    f.querySelectorAll('.sv-plus').forEach(b => b.onclick = () => { const t = b.previousElementSibling; const ouvert = t.classList.toggle('sv-ouvert'); b.textContent = ouvert ? 'Replier' : 'Lire la suite'; });
+    brancherPj(f);
     g.dossiers.forEach((s, i) => fil(f.querySelector('#sv-d' + i), s, plusieurs, true));
+  }
+
+  // 09/11 : aperçu d'une pièce jointe (image ou PDF) dans une fenêtre, les autres formats sont téléchargés
+  function brancherPj(zone) {
+    zone.querySelectorAll('[data-pj]').forEach(b => b.onclick = async () => {
+      if (!S.pj) return;
+      b.disabled = true; const avant = b.querySelector('small').textContent; b.querySelector('small').textContent = 'ouverture…';
+      try {
+        const x = await S.pj(b.dataset.pj), url = URL.createObjectURL(x.blob), nom = b.dataset.nom;
+        const voir = /^image\/(png|jpeg|gif|webp)$/.test(x.type) ? `<img src="${url}" alt="${esc(nom)}">` : x.type === 'application/pdf' ? `<iframe src="${url}" title="${esc(nom)}"></iframe>` : '';
+        if (!voir) { const a = document.createElement('a'); a.href = url; a.download = nom; a.click(); return; }
+        let d = document.getElementById('sv-apercu');
+        if (!d) { d = document.createElement('dialog'); d.id = 'sv-apercu'; d.className = 'sv-apercu'; document.body.append(d); d.addEventListener('close', () => { d.innerHTML = ''; }); d.addEventListener('click', e => { if (e.target === d) d.close(); }); }
+        d.innerHTML = `<div class="sv-ap-barre"><b>${esc(nom)}</b><a href="${url}" download="${esc(nom)}">Télécharger</a><button type="button" aria-label="Fermer">Fermer</button></div><div class="sv-ap-corps">${voir}</div>`;
+        d.querySelector('button').onclick = () => d.close(); d.showModal();
+      } catch (e) { alert('Impossible d\'ouvrir la pièce : ' + (e.message || e)); }
+      finally { b.disabled = false; b.querySelector('small').textContent = avant; }
+    });
   }
 
   async function fil(f, s, plusieurs, sansDiscussion) {
     const nomDossier = s.horsCmd ? s.titre : `${s.titre ? esc(s.titre) : 'Commande'}${s.pour ? ' pour ' + esc(s.pour) : ''} <span class="petit">· commande …${esc(s.court || '')}</span>`;
     f.innerHTML = `${plusieurs ? `<h3 class="sv-dos">${s.horsCmd ? esc(nomDossier) : nomDossier}</h3>` : ''}
-      <section><h3 class="sv-h3">Dans l'espace : choix, relecture, documents</h3><div id="sv-esp"><p class="petit">Chargement…</p></div></section>
-      ${s.horsCmd || sansDiscussion ? '' : `<section><h3 class="sv-h3">Discussion avec l'archiviste</h3>${(s.discussion || []).length ? `<ol class="sv-msgs">${s.discussion.map(m => {
-        const t = m.sens === 'entrant' ? deplier(sansCitation(m.texte)) : sansCitation(m.texte), complet = String(m.texte || '').trim();
-        return `<li class="sv-m sv-${m.sens === 'entrant' ? 'in' : m.sens === 'note' ? 'note' : 'out'}"><div class="sv-tete"><b>${m.sens === 'entrant' ? esc(m.de || 'Client') : m.sens === 'note' ? 'Note' : 'Archiviste'}</b> · ${esc(heure(m.t))}${m.essai ? ' · <i>essai, non envoyé</i>' : ''}</div>
-          ${m.sujet ? `<div class="sv-suj">${esc(m.sujet)}</div>` : ''}<div class="sv-txt">${esc(t)}</div>${complet.length > t.length + 20 ? `<details class="sv-rep"><summary>Message complet, avec l'historique cité</summary><div class="sv-txt">${esc(complet)}</div></details>` : ''}</li>`; }).join('')}</ol>` : '<p class="petit">Aucun échange.</p>'}</section>`}`;
+      <div id="sv-esp"><p class="petit">Chargement…</p></div>`;
     const esp = f.querySelector('#sv-esp');
     const blocs = [];
     for (const id of s.arbres || []) {
