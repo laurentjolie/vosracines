@@ -70,6 +70,12 @@ async function sourceFirebase() {
     // 02/11/2026 (D1) : validation du bon à tirer par le client, puis PDF téléchargeable (morceaux base64 publiés depuis HQ)
     validation: async id => { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'validation', 'bat')); if (!d.exists()) return null; const x = d.data(); return {...x, quand: x.quand && x.quand.toDate ? x.quand.toDate().toISOString() : x.quand}; },
     valider: (id, version) => fb.setDoc(fb.doc(db, 'arbres', id, 'validation', 'bat'), {par: U.email, quand: fb.serverTimestamp(), version}),
+    // 10/11/2026 (Laurent : une seule réouverture sans son accord) : on note la réouverture, puis on retire la validation
+    reouvert: async id => (await fb.getDoc(fb.doc(db, 'arbres', id, 'validation', 'reouverture'))).exists(),
+    devalider: async id => {
+      await fb.setDoc(fb.doc(db, 'arbres', id, 'validation', 'reouverture'), {par: U.email, quand: fb.serverTimestamp()});
+      await fb.deleteDoc(fb.doc(db, 'arbres', id, 'validation', 'bat'));
+    },
     pdf: async (id, n, progres) => { const out = []; for (let k = 0; k < n; k++) { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'pdf', String(k))); if (!d.exists()) throw new Error('morceau ' + k + ' absent'); out.push(d.data().d); if (progres) progres(k + 1, n); } return out; },
     // 30/10 : orientation du livre (premier jet -> BAT)
     ouvrirOrientationClient: (id, oui) => fb.updateDoc(fb.doc(db, 'arbres', id), {orientation: !!oui}),
@@ -147,6 +153,8 @@ async function sourceDev() {   // données locales pour essayer l'interface sans
     ouvrirRelecture: async () => {},
     validation: async id => devValidation[id] || null,
     valider: async (id, version) => { devValidation[id] = {par: user.email, quand: new Date().toISOString(), version}; },
+    reouvert: async id => !!(devValidation[id + ':r']),
+    devalider: async id => { devValidation[id + ':r'] = true; delete devValidation[id]; },
     pdf: async (id, n, progres) => { const out = []; for (let k = 0; k < n; k++) { out.push(await (await fetch(`dev/pdf/${id}/${k}.txt`)).text()); if (progres) progres(k + 1, n); } return out; },
     ouvrirOrientationClient: async () => {},
     proposition: async id => { try { return await (await fetch(`dev/proposition/${id}.json`)).json(); } catch (e) { return null; } },

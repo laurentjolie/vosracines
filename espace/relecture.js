@@ -190,9 +190,9 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   function majEtape() {
     form.hidden = verrou();
     let ferme = notes.querySelector('.rl-ferme');
-    if (verrou() && !ferme) { notes.insertAdjacentHTML('afterbegin', '<p class="rl-ferme">Vous avez validé ce livre pour l’impression : il n’est plus modifiable. Vos commentaires restent visibles ci-dessous.</p>'); }
+    if (verrou() && !ferme) { notes.insertAdjacentHTML('afterbegin', '<p class="rl-ferme">Vous avez validé ce livre pour l’impression. Vos commentaires restent visibles ci-dessous ; pour en ajouter, rouvrez votre relecture (bouton en haut de la page), tant que l’impression n’est pas lancée.</p>'); }
     if (!verrou() && ferme) ferme.remove();
-    if (etape === 'premier_jet') { zone.innerHTML = `<div class="rl-etape"><p><b>Premier jet.</b> Vos commentaires nous servent à préparer le bon à tirer : la version que vous relirez, que vous pourrez encore faire corriger, puis valider pour l’impression.</p></div>`; return; }
+    if (etape === 'premier_jet') { zone.innerHTML = `<div class="rl-etape"><p><b>Premier jet.</b> Découvrez-le au calme, en prenant votre temps : c’est souvent un moment d’émotion. Vos commentaires nous servent à préparer le bon à tirer : la version que vous relirez, que vous pourrez encore faire corriger, puis valider pour l’impression.</p></div>`; return; }
     if (etape !== 'bat') { zone.innerHTML = ''; return; }
     if (validation === undefined) { zone.innerHTML = ''; return; }
     if (validation) {
@@ -200,18 +200,37 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
       zone.innerHTML = `<div class="rl-etape valide"><p><b>Livre validé pour l’impression</b> le ${esc(quandFr(validation.quand))}${admin ? ` par ${esc(validation.par)}${validation.version && validation.version !== L.version ? ` (sur la version ${esc(validation.version)}, différente de la version publiée)` : ''}` : ''}. ${admin ? 'Le client peut télécharger le PDF.' : 'Il n’est plus modifiable.'}</p>
         ${pdf ? `<button class="btn btn-1" data-pdf>Télécharger le livre (PDF)</button>` : `<p class="petit">${admin ? 'Aucun PDF publié pour ce livre : relancer publier_livre.py avec --etape bat.' : 'Le PDF n’est pas encore disponible : nous vous écrivons dès qu’il l’est.'}</p>`}</div>`;
       const b = zone.querySelector('[data-pdf]'); if (b) b.onclick = () => telechargerPdf(meta, S, b);
+      // 10/11/2026 (retour de la maman de Laurent : une remarque lui est revenue après la validation) : tant que
+      // l'impression n'est pas lancée (livre.imprime), la personne qui a validé peut rouvrir sa relecture, commenter,
+      // puis valider à nouveau la version corrigée.
+      // 10/11/2026 (Laurent) : une seule réouverture sans son accord ; au-delà, on écrit à l'archiviste (escalade)
+      if (!admin && !L.imprime && S.devalider && validation.par === U.email) (S.reouvert ? S.reouvert(meta.id) : Promise.resolve(false)).catch(() => true).then(deja => {
+        const z = zone.querySelector('.rl-etape'); if (!z || z.querySelector('[data-rouvrir], .rl-reouv')) return;
+        if (deja) { z.insertAdjacentHTML('beforeend', `<p class="petit rl-reouv">Une remarque vous revient ? Répondez simplement au dernier mail de l’archiviste : nous verrons ensemble s’il faut rouvrir la relecture.</p>`); return; }
+        z.insertAdjacentHTML('beforeend', `<p class="petit">Une remarque vous revient ? Tant que l’impression n’est pas lancée, vous pouvez rouvrir votre relecture une fois.</p>
+          <button class="btn" data-rouvrir>Reprendre ma relecture</button><p class="msg-erreur" role="alert"></p>`);
+        zone.querySelector('[data-rouvrir]').onclick = async e => {
+          e.target.disabled = true;
+          try { await S.devalider(meta.id); validation = null; meta.validation = null; majEtape(); }
+          catch (err) { console.error(err); e.target.disabled = false; zone.querySelector('.msg-erreur').textContent = 'La relecture n’a pas pu être rouverte. Réessayez dans un instant ; si cela recommence, écrivez-nous.'; }
+        };
+      });
       return;
     }
     if (admin) { zone.innerHTML = `<div class="rl-etape bat"><p><b>Bon à tirer ${esc(L.version || '')}</b> : en attente de la validation du client.</p></div>`; return; }
-    zone.innerHTML = `<div class="rl-etape bat"><p><b>Bon à tirer.</b> C’est la dernière relecture : signalez dans les commentaires ce qu’il faut encore changer, nous le corrigeons. Quand tout vous convient, validez le livre pour l’impression ; le PDF vous est alors remis.</p>
+    zone.innerHTML = `<div class="rl-etape bat"><p><b>Bon à tirer.</b> C’est la dernière relecture : signalez dans les commentaires ce qu’il faut encore changer, nous le corrigeons. Prenez le temps de tout relire : validez seulement quand vous avez fini et que tout vous convient ; le PDF vous est alors remis.</p>
       <button class="btn btn-1" data-valider>Je valide pour l’impression</button>
       <div class="rl-confirmer" role="alertdialog" aria-labelledby="rl-conf-t" aria-describedby="rl-conf-d" hidden></div></div>`;
     const conf = zone.querySelector('.rl-confirmer'), bv = zone.querySelector('[data-valider]');
     bv.onclick = () => {
       const ouverts = retours.filter(r => r.auteur === U.email && r.statut !== 'fait').length;
-      conf.innerHTML = `<p id="rl-conf-t"><b>Valider le livre pour l’impression ?</b></p>
-        <p id="rl-conf-d">Après validation, le livre ne sera plus modifié : il est bon pour l’impression tel que vous le voyez, et vous pourrez télécharger le PDF.${ouverts ? ` Attention : ${ouverts === 1 ? 'un de vos commentaires n’a' : `${ouverts} de vos commentaires n’ont`} pas encore été traité${ouverts === 1 ? '' : 's'} ; si vous validez maintenant, ${ouverts === 1 ? 'il ne sera pas pris' : 'ils ne seront pas pris'} en compte.` : ''}</p>
-        <div class="rangee"><button class="btn btn-1" data-oui>Oui, je valide pour l’impression</button><button class="btn" data-non>Pas encore</button></div><p class="msg-erreur" role="alert"></p>`;
+      // 10/11/2026 : des commentaires en attente ne se valident pas « par-dessus » : on corrige d'abord, puis on valide la version corrigée
+      conf.innerHTML = ouverts ? `<p id="rl-conf-t"><b>Vous avez ${ouverts === 1 ? 'un commentaire' : `${ouverts} commentaires`} en attente</b></p>
+        <p id="rl-conf-d">Nous ${ouverts === 1 ? 'le prenons' : 'les prenons'} en compte et vous envoyons la version corrigée ; vous la validerez ensuite. Vous pouvez encore ajouter d’autres commentaires d’ici là.</p>
+        <div class="rangee"><button class="btn btn-1" data-non>D’accord, je continue ma relecture</button><button class="btn" data-oui>Valider quand même, sans ces corrections</button></div><p class="msg-erreur" role="alert"></p>`
+        : `<p id="rl-conf-t"><b>Avez-vous fini votre relecture ?</b></p>
+        <p id="rl-conf-d">En validant, vous nous dites que vous n’avez plus de remarque : le livre est bon pour l’impression tel que vous le voyez, et vous pourrez télécharger le PDF. Si une remarque vous revient ensuite, vous pourrez rouvrir votre relecture une fois, tant que l’impression n’est pas lancée.</p>
+        <div class="rangee"><button class="btn btn-1" data-oui>Oui, j’ai fini : je valide pour l’impression</button><button class="btn" data-non>Pas encore</button></div><p class="msg-erreur" role="alert"></p>`;
       conf.hidden = false; bv.hidden = true; conf.querySelector('[data-non]').focus();
       conf.querySelector('[data-non]').onclick = () => { conf.hidden = true; bv.hidden = false; bv.focus(); };
       conf.querySelector('[data-oui]').onclick = async e => {
