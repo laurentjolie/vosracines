@@ -166,6 +166,12 @@ footer .brand{font:500 22px var(--f-serif);color:var(--on-night)}
 .ailleurs{margin-top:8px;display:grid;gap:12px}
 .ailleurs .lab{font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft)}
 .cmp.other{background:transparent;border-style:dashed}
+/* 16/11/2026 (Laurent) : les prix de la concurrence ne doivent pas passer pour les nôtres : plus petits, rayés, étiquetés « ailleurs » */
+.cmp.other{padding:14px 18px;opacity:.9}
+.cmp.other .who{font-weight:500;font-size:16px}
+.cmp.other .price{font-size:19px;color:var(--ink-soft);text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:rgba(168,68,30,.75);white-space:nowrap}
+.cmp.other .price::before{content:"ailleurs";display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--ink-soft);margin-bottom:3px;text-align:right}
+.cmp.other .what{font-size:15px}
 .chez{padding:22px 24px;border:2px solid var(--gold);border-radius:4px;background:var(--card)}
 .chez .lab{font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--rubric)}
 .chez p{margin-top:8px}
@@ -377,7 +383,7 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
       <p class="lede" style="margin-top:16px">Retrouver un ancêtre, c'est déchiffrer des registres manuscrits, commune par commune. Une IA lit les archives et prépare le texte : c'est ce qui rend ce livre abordable, et nous ne le cachons pas. Chaque filiation s'appuie sur un acte, le livre dit clairement ce qui reste une piste, et vous relisez le livre avant l'impression.</p>
       <div class="why">
         <div class="ailleurs">
-          <span class="lab">Pour comparer</span>
+          <span class="lab">Pour comparer : les prix ailleurs, pas les nôtres</span>
           <div class="cmp other"><span class="who">Une biographie familiale écrite par un biographe</span><span class="price">1 500 à 2 500 €</span><span class="what">prix moyen pratiqué par 69,5 % des biographes (étude Narrovita auprès de 220 biographes)</span><span class="cite">Source : <a href="https://publiersonlivre.fr/?p=8083">Publier son livre</a></span></div>
           <div class="cmp other"><span class="who">Une recherche chez un généalogiste professionnel</span><span class="price">724 €</span><span class="what">en moyenne pour cinq générations, remise en dossier, sans livre</span><span class="cite">Source : <a href="https://www.rfgenealogie.com/infos/le-vrai-visage-des-genealogistes-professionnels-familiaux">Revue française de généalogie</a></span></div>
         </div>
