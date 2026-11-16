@@ -89,7 +89,7 @@ header.top{display:flex;justify-content:space-between;align-items:center;gap:16p
 .legend b{font-variant-numeric:tabular-nums lining-nums;font-weight:600}
 .small{font:13.5px var(--f-ui);color:var(--ink-soft);margin-top:12px}
 
-.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:40px 0 0;padding:0;border-top:1px solid var(--line)}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin:40px 0 0;padding:0;border-top:1px solid var(--line)}
 .steps li{list-style:none;padding:20px 18px 0 0;position:relative;min-width:0}
 .steps li::before{content:"";position:absolute;top:-6px;left:0;width:11px;height:11px;border-radius:50%;background:var(--paper-2);border:2px solid var(--rubric)}
 .steps li:last-child::before{background:var(--gold);border-color:var(--gold)}
@@ -297,7 +297,7 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Un livre qui raconte la famille : les ancêtres retrouvés dans les registres, leurs actes, leurs villages, leurs métiers.">
 </head><body>
-<a class="bandeau-noel" href="#commande" id="lien-noel">Noël : offrez l’histoire de leur famille. La carte cadeau tout de suite, sous le sapin ; le livre ensuite. <u>Offrir</u></a>
+<a class="bandeau-noel" href="#offrir" id="lien-noel">Noël : offrez l’histoire de leur famille. La carte cadeau tout de suite, sous le sapin ; le livre ensuite. <u>Offrir</u></a>
 <div class="night">
   <div class="wrap">
     <header class="top">
@@ -403,11 +403,12 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
       <p class="rub">Comment ça se passe</p>
       <h2>Vous offrez, on s'occupe du reste.</h2>
       <ol class="steps">
-        <li><span class="n">1</span><b>Vous commandez</b><span>Pour vous, ou pour l'offrir. Si c'est une surprise, on fait tout avec vous.</span></li>
-        <li><span class="n">2</span><b>Un premier échange, par mail</b><span>Notre archiviste vous écrit : les noms, les lieux, les papiers et les photos de famille que vous avez. On amorce chaque branche.</span></li>
-        <li><span class="n">3</span><b>La recherche</b><span>Acte par acte, dans les registres paroissiaux et d'état civil.</span></li>
-        <li><span class="n">4</span><b>Vous relisez</b><span>En deux temps : un premier jet que vous commentez, puis le bon à tirer, pour vos dernières corrections avant l'impression.</span></li>
-        <li><span class="n">5</span><b>Le livre arrive</b><span>Dès qu'il est prêt : quelques jours à quelques semaines selon les archives. Les exemplaires reliés suivent une dizaine de jours plus tard.</span></li>
+        <li><span class="n">1</span><b>Prenons contact</b><span>Pour vous, ou pour l'offrir. Si c'est une surprise, on fait tout avec vous.</span></li>
+        <li><span class="n">2</span><b>Faisons connaissance, par échange de mails</b><span>Notre archiviste vous écrit : les noms, les lieux, les papiers et les photos de famille que vous avez. On amorce chaque branche.</span></li>
+        <li><span class="n">3</span><b>Votre arbre généalogique en ligne</b><span>Dès les premières générations retrouvées, vous le découvrez dans votre espace, et vous le complétez avec nous.</span></li>
+        <li><span class="n">4</span><b>La recherche</b><span>Acte par acte, dans les registres paroissiaux et d'état civil.</span></li>
+        <li><span class="n">5</span><b>Vous relisez</b><span>En deux temps : un premier jet que vous commentez, puis le bon à tirer, pour vos dernières corrections avant l'impression.</span></li>
+        <li><span class="n">6</span><b>Le livre arrive</b><span>Dès qu'il est prêt : quelques jours à quelques semaines selon les archives. Les exemplaires reliés suivent une dizaine de jours plus tard.</span></li>
       </ol>
       <div class="five" style="margin-bottom:24px">
         <b>Le mur des premiers ancêtres</b>
@@ -439,7 +440,8 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
           <p class="price">49 €</p><p class="lancement">Prix de lancement, pour nos premières familles</p><p class="papier">+ 29 € par exemplaire papier relié</p>
           <ul><li>Un chapitre par lignée : l'arbre généalogique, le récit, les actes, les villages</li><li>Les records, les prénoms, les métiers et les noms de la famille</li><li>Le livre numérique (PDF), à relire avant impression</li></ul>
           <p class="price-total">Les exemplaires reliés se commandent ensuite, une fois le livre vu en numérique.</p>
-          <a class="btn" href="#commande">Commander</a>
+          <a class="btn" href="https://buy.stripe.com/28EcN686f7xI7NCarbgYU00">Mettre dans le panier</a>
+          <p class="note" style="margin-top:10px">Paiement sur une page sécurisée Stripe, où se saisit aussi un code promo. Notre archiviste vous écrit juste après : pour vous ou pour offrir, tout se règle par mail, surprise comprise.</p>
         </div>
         <div class="opts" role="region" aria-label="Exemplaires et option" tabindex="0" style="margin-top:0">
           <table>
@@ -453,44 +455,6 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
       </div>
       <div class="extras">
         <span><b>Livre surprise</b> pour offrir sans rien savoir des noms : la surprise est gardée jusqu'au livre</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="night" id="commande">
-    <div class="wrap test">
-      <div>
-        <p class="rub">Commander</p>
-        <h2>Commençons votre arbre généalogique.</h2>
-        <p class="lede" style="margin-top:16px">Le paiement se fait sur une page sécurisée. Ensuite, notre archiviste vous écrit : tout se passe par mail.</p>
-        <p class="note" style="margin-top:20px">Ces informations servent uniquement à préparer le livre.</p>
-      </div>
-      <div>
-        <form id="f" novalidate>
-          <div class="row">
-            <fieldset class="pq"><legend>Ce livre est</legend><label><input type="radio" name="pourqui" value="moi" checked><span>Pour moi</span></label><label><input type="radio" name="pourqui" value="offrir"><span>À offrir</span></label></fieldset>
-          </div>
-          <fieldset class="pq" id="quibloc" hidden><legend>Qui nous donnera les premiers renseignements sur la famille ?*</legend><label><input type="radio" name="qui" value="moi" checked><span>Moi, qui l'offre</span></label><label><input type="radio" name="qui" value="dest"><span>La personne qui le reçoit</span></label></fieldset>
-          <fieldset class="pq" id="quandbloc" hidden><legend>Quand l’offrez-vous ?</legend><label><input type="radio" name="quand" value="noel" checked><span>À Noël</span></label><label><input type="radio" name="quand" value="now"><span>Tout de suite</span></label></fieldset>
-          <div id="destbloc" hidden>
-            <label for="dprenom">Son prénom<input id="dprenom" name="dprenom" type="text" autocomplete="off"></label>
-            <label for="demail">Son e-mail<input id="demail" name="demail" type="email" autocomplete="off"></label>
-            <label class="chk"><input id="surprise" type="checkbox" checked> <span>Garder la surprise : la personne ne saura pas que c'est un livre</span></label>
-          </div>
-          <p class="note" id="asterisque" hidden>* Il nous faut quelques noms, lieux et dates pour retrouver les premiers actes ; ensuite, nous cherchons seuls.</p>
-          <label for="email">Votre e-mail<input id="email" name="email" type="email" autocomplete="email" required></label>
-          <p class="note" id="pqnote">C'est votre propre famille : rien d'autre à préciser : notre archiviste vous écrit par mail juste après.</p>
-          <p class="note" id="total">Total : 49 €</p><p class="note">Un code promo ? Vous pourrez le saisir sur la page de paiement.</p>
-          <p class="note" id="err" role="alert" aria-live="assertive" hidden></p>
-          <button class="btn" type="submit">Passer au paiement</button>
-          <p class="note">Paiement par carte sur une page sécurisée Stripe. Une question avant de commander ? <a href="mailto:contact@vosracines.fr">contact@vosracines.fr</a></p>
-        </form>
-        <div class="done" id="done" hidden>
-          <h3>Merci, c'est noté.</h3>
-          <p>Le paiement n'est pas encore ouvert : vous serez redirigé vers la page de paiement sécurisée dès qu'il le sera.</p>
-          <dl id="recap"></dl>
-          <button class="btn ghost" type="button" id="again">Modifier</button>
-        </div>
       </div>
     </div>
   </section>
@@ -562,62 +526,6 @@ var STRIPE = { livre: 'https://buy.stripe.com/28EcN686f7xI7NCarbgYU00', livre_do
     t.addEventListener('click',function(){show(t);});
     t.addEventListener('keydown',function(e){var j=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:null;if(j===null)return;j=(j+tabs.length)%tabs.length;tabs[j].focus();show(tabs[j]);e.preventDefault();});
   });
-  function pq(){return document.querySelector('input[name=pourqui]:checked').value;}
-  function qui(){var p=pq();if(p==='offrir')return document.querySelector('input[name=qui]:checked').value;return 'moi';}
-  function noel(){return pq()==='offrir'&&document.querySelector('input[name=quand]:checked').value==='noel';}
-  function pcode(){var p=pq();if(p==='offrir'&&!noel()&&qui()==='dest'&&document.getElementById('surprise').checked)return 'carte';return p;}
-  function v(id){return (document.getElementById(id).value||'').trim();}
-  function lab(name,val){var i=document.querySelector('input[name='+name+'][value='+val+']');return i?i.parentNode.textContent:'';}
-  var NOTE={
-    moi:"C'est votre propre famille : rien d'autre à préciser : notre archiviste vous écrit par mail juste après.",
-    offrir_moi:"Vous nous racontez la famille, en secret : le livre reste une surprise.",
-    offrir_dest:"Nous écrirons à cette personne pour construire son livre avec elle. Vous serez en copie de nos échanges ; le livre ne sera donc plus une surprise.",
-    noel_moi:"Vous recevez tout de suite une carte cadeau à imprimer, à glisser sous le sapin. Vous nous racontez la famille dès maintenant, en secret.",
-    noel_dest:"Vous recevez tout de suite une carte cadeau à imprimer, à glisser sous le sapin. Nous n'écrirons à cette personne qu'à partir du 26 décembre ; vous serez en copie.",
-    carte:"Notre archiviste écrira à cette personne pour lui poser quelques questions sur sa famille, sans lui dévoiler la nature du cadeau. Vous serez en copie."};
-  function maj(){
-    var p=pq(), q=qui();
-    document.getElementById('quibloc').hidden=(p!=='offrir');
-    document.getElementById('destbloc').hidden=(q!=='dest');
-    document.getElementById('quandbloc').hidden=(p!=='offrir');
-    document.getElementById('surprise').parentNode.hidden=noel();
-    document.getElementById('asterisque').hidden=(p!=='offrir');
-    var c=pcode();document.getElementById('pqnote').textContent=NOTE[noel()?'noel_'+q:(c==='carte'?'carte':(p==='offrir'?'offrir_'+q:p))];
-  }
-  Array.prototype.forEach.call(document.querySelectorAll('input[name=pourqui],input[name=qui],input[name=quand],#surprise'),function(r){r.addEventListener('change',maj);});
-  maj();
-  document.getElementById('lien-noel').addEventListener('click',function(){document.querySelector('input[name=pourqui][value=offrir]').checked=true;document.querySelector('input[name=quand][value=noel]').checked=true;maj();});
-  function b64url(str){var b=new TextEncoder().encode(str),bin='';b.forEach(function(x){bin+=String.fromCharCode(x);});return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
-  var RE=/^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-  var dos={checked:false,addEventListener:function(){}};
-  function total(){var t=49+(dos.checked?39:0);document.getElementById('total').textContent='Total : '+t+' €';return t;}
-  var f=document.getElementById('f'), done=document.getElementById('done'), err=document.getElementById('err');
-  function oups(m,id){err.textContent=m;err.hidden=false;if(id)document.getElementById(id).focus();}
-  f.addEventListener('submit',function(e){
-    e.preventDefault();
-    var p=pcode(), q=qui(), email=v('email'), dp=v('dprenom'), de=v('demail');
-    if(q==='dest'){
-      if(!dp)return oups("Il nous faut le prénom de la personne qui reçoit le livre.",'dprenom');
-      if(!RE.test(de))return oups("Il nous faut une adresse e-mail valide pour la personne qui reçoit le livre.",'demail');
-    }
-    if(!RE.test(email))return oups("Il nous faut votre adresse e-mail.",'email');
-    if(q==='dest'&&de.toLowerCase()===email.toLowerCase())return oups("Les deux adresses sont identiques : si c'est pour vous, choisissez « Pour moi ».",'demail');
-    err.hidden=true;
-    var data={v:1,p:p,q:q};if(q==='dest'){data.n=dp.slice(0,40);data.e=de;}if(noel())data.d='noel';
-    var ref=b64url(JSON.stringify(data)); if(ref.length>200){delete data.n;ref=b64url(JSON.stringify(data));}
-    var link=dos.checked?STRIPE.livre_dossier:STRIPE.livre;
-    try{localStorage.setItem('vr_commande',JSON.stringify({t:Date.now(),p:p,q:q,n:data.n||'',e:data.e||''}));}catch(_){}
-    if(link){
-      window.location.href=link+(link.indexOf('?')<0?'?':'&')+'prefilled_email='+encodeURIComponent(email)+'&client_reference_id='+ref; return;
-    }
-    var recap=document.getElementById('recap'); recap.textContent='';
-    var rows=[['Le livre est',lab('pourqui',p==='carte'?'offrir':p)+(p==='carte'?' (surprise)':'')]];
-    if(q==='dest')rows.push(['Qui raconte',dp+' ('+de+'), vous en copie']);else if(p==='offrir')rows.push(['Qui raconte','Vous, en secret']);
-    rows.push(['Total',total()+' €'],['Contact',email]);
-    rows.forEach(function(r){var dt=document.createElement('dt');dt.textContent=r[0];var dd=document.createElement('dd');dd.textContent=r[1];recap.appendChild(dt);recap.appendChild(dd);});
-    f.hidden=true; done.hidden=false;
-  });
-  document.getElementById('again').addEventListener('click',function(){done.hidden=true;f.hidden=false;});
 })();
 </script>
 
