@@ -570,3 +570,18 @@ dialog.sv-apercu::backdrop{background:rgba(30,20,10,.55)}
 .sv-ap-corps img{max-width:100%;height:auto;display:block}
 .sv-ap-corps iframe{width:100%;height:100%;border:0;background:#fff}
 @media (max-width:719px){.sv-m{max-width:100%}.sv-tete time{margin-left:0}}
+
+/* 16/11/2026 : indicateurs en haut de l'admin */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{margin:0;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px 8px;min-width:0}
+.kpi figcaption{font-size:14px;color:var(--ink-soft);font-weight:600}
+.kpi b{display:block;font-family:var(--f-display);font-size:26px;line-height:1.15;color:var(--ink)}
+.kpi .petit{font-size:13px}
+.kpi-g{position:relative;margin-top:6px;touch-action:pan-y}
+.kpi-g svg{display:block;width:100%;height:56px;overflow:visible}
+.kpi-ligne{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.kpi-aire{fill:var(--accent);fill-opacity:.10;stroke:none}
+.kpi-curseur{stroke:var(--line-strong);stroke-width:1;vector-effect:non-scaling-stroke}
+.kpi-bulle{position:absolute;top:-30px;white-space:nowrap;background:var(--ink);color:var(--paper);font-size:13px;padding:3px 7px;border-radius:6px;pointer-events:none}
+.kpi-axe{display:flex;justify-content:space-between;margin-top:2px;font-size:12px!important}

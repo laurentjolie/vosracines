@@ -447,6 +447,43 @@ const cleEmail = e => {
   if (d === 'gmail.com') l = l.split('+')[0].replace(/\./g, '');
   return l + '@' + d;
 };
+// 16/11/2026 (Laurent) : en haut de l'admin, les indicateurs dans le temps (cumul jour par jour).
+// Inscriptions = commandes reçues (codes promo compris) ; clients = commandes payées avec un montant ; livres finis = bons à tirer validés ;
+// chiffre d'affaires = montants payés (Stripe, en centimes dans commande.json). Une petite courbe par indicateur, pas d'axe double.
+function dessinerKpis(el, suivis, arbres) {
+  const jour = d => { const t = typeof d === 'number' ? (d < 1e12 ? d * 1000 : d) : Date.parse(d); return isNaN(t) ? null : new Date(new Date(t).toDateString()).getTime(); };
+  const paye = x => x.paiement === 'paid' && (+x.montant || 0) > 0;
+  const series = [
+    ['Inscriptions', suivis.map(x => [jour(x.cree), 1]), v => String(v)],
+    ['Clients payants', suivis.filter(paye).map(x => [jour(x.cree), 1]), v => String(v)],
+    ['Livres finis', arbres.filter(a => a.validation && a.validation.quand).map(a => [jour(a.validation.quand), 1]), v => String(v)],
+    ['Chiffre d’affaires', suivis.filter(paye).map(x => [jour(x.cree), (+x.montant || 0) / 100]), v => v.toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' €'],
+  ].map(([t, ev, f]) => [t, ev.filter(e => e[0] !== null), f]);
+  const tous = series.flatMap(s => s[1].map(e => e[0])); if (!tous.length) { el.hidden = true; return; }
+  const J = 864e5, fin = jour(Date.now()), debut = Math.min(...tous) - J, n = Math.round((fin - debut) / J) + 1;
+  const W = 300, H = 64, X = i => i / Math.max(1, n - 1) * W;
+  const date = i => new Date(debut + i * J + J / 2).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'});
+  el.innerHTML = series.map(([t, ev, f], k) => {
+    const pas = new Array(n).fill(0); ev.forEach(e => { const i = Math.round((e[0] - debut) / J); if (i >= 0 && i < n) pas[i] += e[1]; });   // arrondi : les changements d'heure font des jours de 23 ou 25 h
+    const cum = []; let c = 0; for (let i = 0; i < n; i++) { c += pas[i]; cum.push(c); }
+    const max = Math.max(1, ...cum), Y = v => H - 3 - v / max * (H - 8);
+    let d = `M0 ${Y(cum[0]).toFixed(1)}`; cum.forEach((v, i) => { if (i) d += ` H${X(i).toFixed(1)} V${Y(v).toFixed(1)}`; });
+    const sem = cum[n - 1] - cum[Math.max(0, n - 8)];
+    el._cum = el._cum || []; el._cum[k] = cum;
+    return `<figure class="kpi" data-k="${k}"><figcaption>${esc(t)}</figcaption><b>${esc(f(cum[n - 1]))}</b><span class="petit">${sem ? '+' + esc(f(sem)) + ' en 7 jours' : 'rien en 7 jours'}</span>
+      <div class="kpi-g"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(t)} : ${esc(f(cum[n - 1]))} au ${esc(date(n - 1))}">
+        <path d="${d} V${H} H0Z" class="kpi-aire"/><path d="${d}" class="kpi-ligne"/><line class="kpi-curseur" x1="0" x2="0" y1="0" y2="${H}" hidden/></svg>
+        <div class="kpi-bulle" hidden></div></div><div class="kpi-axe petit"><span>${esc(date(0))}</span><span>aujourd’hui</span></div></figure>`;
+  }).join('');
+  el.querySelectorAll('.kpi').forEach(fg => {
+    const k = +fg.dataset.k, g = fg.querySelector('.kpi-g'), svg = g.querySelector('svg'), cur = svg.querySelector('.kpi-curseur'), bulle = g.querySelector('.kpi-bulle'), f = series[k][2];
+    const montrer = e => { const r = svg.getBoundingClientRect(), i = Math.max(0, Math.min(n - 1, Math.round((e.clientX - r.left) / r.width * (n - 1))));
+      cur.setAttribute('x1', X(i)); cur.setAttribute('x2', X(i)); cur.hidden = false; bulle.hidden = false;
+      bulle.textContent = `${date(i)} : ${f(el._cum[k][i])}`; const px = i / Math.max(1, n - 1) * r.width; bulle.style.left = Math.max(0, Math.min(r.width - bulle.offsetWidth, px - bulle.offsetWidth / 2)) + 'px'; };
+    g.addEventListener('pointermove', montrer); g.addEventListener('pointerdown', montrer);
+    g.addEventListener('pointerleave', () => { cur.hidden = true; bulle.hidden = true; });
+  });
+}
 async function pageAdmin(onglet) {
   if (onglet === 'arbres') onglet = 'clients';
   marquer({p: 'admin', o: onglet});
@@ -490,6 +527,7 @@ async function pageAdmin(onglet) {
   $app.innerHTML = barre() + `<main class="page large"><div class="admin">
     <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button></nav>
     <section>${onglet === 'archiviste' ? `<h1>Archiviste</h1><div id="suivi"></div>` : `<h1>Clients</h1>
+      <div class="kpis" id="kpis"></div>
       <div class="outils"><label class="cache-visuel" for="filtre">Rechercher</label><input id="filtre" type="search" placeholder="Nom, adresse, titre…"></div>
       <ul class="adm-clients">${clients.map(ligneClient).join('')}</ul>
       ${orphelins.length ? `<h2 class="sv-h2">Arbres sans client</h2><ul class="adm-clients">${orphelins.map(a => ligne(a.titre, court(a), a, a.validation, actionsArbre(a, true), (a.titre + ' ' + (a.sous_titre || '')).toLowerCase())).join('')}</ul>` : ''}
@@ -498,6 +536,7 @@ async function pageAdmin(onglet) {
         <div class="cases">${arbres.map(a => `<label><input type="checkbox" value="${esc(a.id)}"> ${esc(a.titre)}</label>`).join('')}</div>
         <div class="rangee"><button class="btn btn-1" type="submit">Enregistrer</button><label><input type="checkbox" id="fc-lien"> envoyer aussi un lien d’accès</label><span class="note-ok" id="fc-ok" role="status"></span></div></form>`}</section></div></main>`;
   brancherBarre();
+  const kp = $app.querySelector('#kpis'); if (kp) try { dessinerKpis(kp, suivis, arbres); } catch (e) { console.warn(e); }
   $app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => pageAdmin(b.dataset.t));
   // un seul menu « ⋯ » ouvert à la fois ; il se referme après une action ou un clic ailleurs
   const menus = [...$app.querySelectorAll('.adm-menu')];
