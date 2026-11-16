@@ -496,14 +496,25 @@ details.sv-rep p,details.sv-rep .sv-txt{white-space:pre-wrap;background:var(--bg
 .sv-ret blockquote{margin:4px 0;padding-left:10px;border-left:3px solid var(--line);color:var(--ink-soft)}
 @media (max-width:719px){.sv-d{grid-template-columns:1fr;gap:6px}.sv-choix dl{grid-template-columns:1fr}.sv-choix dt{margin-top:6px}.sv-m{max-width:100%}}
 .sv-dos{font-family:var(--f-display);font-size:20px;margin:28px 0 4px;padding-top:14px;border-top:2px solid var(--line)}
-.adm-clients{list-style:none;margin:0;padding:0;display:grid;gap:14px}
-.adm-client{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-.adm-tete{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:flex-start}
-.adm-tete b{font-size:19px}
-.adm-arbres{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
-.adm-arbre{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;border-top:1px dashed var(--line);padding-top:10px}
-.adm-arbre .btn{min-height:44px;padding:0 14px;font-size:15px}
-.adm-tete .btn{min-height:44px;padding:0 14px;font-size:15px}
+.adm-clients{list-style:none;margin:0;padding:0;background:var(--paper);border:1px solid var(--line);border-radius:12px}
+.adm-client{border-top:1px solid var(--line);padding:6px 8px 6px 14px}
+.adm-client:first-child{border-top:0}
+.adm-ligne{display:flex;align-items:center;gap:8px;min-height:48px}
+.adm-nom{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adm-nom b{font-size:17px}
+.adm-nom .petit{font-size:15px}
+.adm-nom .valide{color:#2F6B3A}
+.adm-ouvrir{min-height:40px;padding:0 14px;font-size:15px}
+.adm-menu{position:relative}
+.adm-menu summary{list-style:none;min-height:40px;width:44px;padding:0;font-size:22px;line-height:1;cursor:pointer}
+.adm-menu summary::-webkit-details-marker{display:none}
+.adm-pop{position:absolute;right:0;top:46px;z-index:15;min-width:270px;max-width:min(360px,calc(100vw - 32px));max-height:70vh;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:6px}
+.adm-pop button{display:block;width:100%;text-align:left;border:0;background:none;padding:11px 12px;border-radius:8px;font:16px var(--f-ui);color:var(--ink);cursor:pointer}
+.adm-pop button:hover{background:var(--bg-2)}
+.adm-pop button:disabled{color:var(--ink-soft)}
+.adm-info{padding:8px 12px;color:var(--ink-soft);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.adm-menu.haut .adm-pop{top:auto;bottom:46px}
+.adm-pop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
 /* 04/11/2026 (retour de Paul) : une croix visible pour fermer la légende, une flèche pour la rouvrir */
 .legende>button{display:flex;align-items:center;gap:8px}
 .legende>button::after{content:'▴';margin-left:auto;font-size:15px;color:var(--ink-soft);flex:none}

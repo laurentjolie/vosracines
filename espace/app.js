@@ -432,24 +432,41 @@ async function pageAdmin(onglet) {
   const avecClient = new Set(clients.flatMap(c => c.arbres));
   const orphelins = arbres.filter(a => !avecClient.has(a.id));
   const titre = id => (arbres.find(a => a.id === id) || {}).titre || id;
-  const boutonsArbre = a => `<div class="rangee"><button class="btn btn-1" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button><button class="btn" data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.proposition ? `<button class="btn" data-or="${esc(a.id)}">Orientation${a.orientation ? ' (ouverte)' : ''}</button>` : ''}${a.livre ? `<button class="btn" data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}</div>`;
-  const ligneArbre = (id, c) => { const a = arbres.find(x => x.id === id); if (!a) return ''; const ouvert = !c || (a.lecteurs || []).some(e => cleEmail(e) === c.cle);
-    return `<li class="adm-arbre"><div><b>${esc(a.titre)}</b> <span class="petit">${esc(a.sous_titre || '')} · ${a.n_ancetres || 0} ancêtres${a.maj ? ' · ' + esc(new Date(a.maj).toLocaleDateString('fr-FR')) : ''}${ouvert ? '' : ' · <i>pas encore ouvert à ce client</i>'}</span>${a.livre ? `<div class="petit etat-livre${a.validation ? ' valide' : ''}">Livre : ${esc(etatLivre(a))}</div>` : ''}</div>${boutonsArbre(a)}</li>`; };
+  // 16/11/2026 (Laurent) : une ligne par fiche ; le détail et les actions passent dans le menu « ⋯ »
+  const court = a => { if (!a) return 'aucun arbre'; const L = a.livre || {}, v = L.version ? ' ' + L.version : '';
+    if (L.etape === 'bat') return a.validation ? `BAT${v} validé` : `BAT${v} à valider`;
+    if (L.etape === 'premier_jet') return `premier jet${v}`;
+    return `${a.n_ancetres || 0} ancêtres`; };
+  const actionsArbre = (a, seul) => `<div class="adm-info"><b>${esc(a.titre)}</b> ${esc(a.sous_titre || '')} · ${a.n_ancetres || 0} ancêtres${a.maj ? ' · ' + esc(new Date(a.maj).toLocaleDateString('fr-FR')) : ''}${a.livre ? `<br>Livre : ${esc(etatLivre(a))}` : ''}</div>
+    ${seul ? '' : `<button data-o="${esc(a.id)}" data-v="admin">Ouvrir</button>`}<button data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.proposition ? `<button data-or="${esc(a.id)}">Orientation${a.orientation ? ' (ouverte)' : ''}</button>` : ''}${a.livre ? `<button data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}`;
+  const ligne = (nom, sousTitre, a, valide, menu, f, ferme) => `<li class="adm-client" data-f="${esc(f)}"><div class="adm-ligne">
+      <span class="adm-nom"><b>${esc(nom)}</b> <span class="petit${valide ? ' valide' : ''}">${esc(sousTitre)}</span>${ferme ? ' <span class="petit"><i>(pas ouvert)</i></span>' : ''}</span>
+      ${a ? `<button class="btn btn-1 adm-ouvrir" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button>` : ''}
+      <details class="adm-menu"><summary class="btn" aria-label="Autres actions">⋯</summary><div class="adm-pop">${menu}</div></details></div></li>`;
+  const ligneClient = c => { const as = c.arbres.map(id => arbres.find(x => x.id === id)).filter(Boolean), a = as[0];
+    const ferme = a && !(a.lecteurs || []).some(e => cleEmail(e) === c.cle);
+    const menu = `<div class="adm-info">${c.emails.map(esc).join('<br>')}${c.commandes.length ? `<br>${c.commandes.length} commande${c.commandes.length > 1 ? 's' : ''}` : ''}</div>
+      ${c.commandes.length ? `<button data-suivi="${esc(c.cle)}">Échanges</button>` : ''}<button data-mod="${esc(c.cle)}">Accès</button><button data-lien="${esc(c.emails[0])}">Envoyer un lien</button><button data-comme="${esc(c.emails[0])}">Voir comme ce client</button>
+      ${as.map((x, k) => '<hr>' + actionsArbre(x, k === 0)).join('')}`;
+    return ligne(c.nom || c.emails[0], court(a) + (as.length > 1 ? ` · +${as.length - 1} arbre${as.length > 2 ? 's' : ''}` : ''), a, a && a.validation, menu,
+      (c.nom + ' ' + c.emails.join(' ') + ' ' + c.arbres.map(titre).join(' ')).toLowerCase(), ferme); };
   $app.innerHTML = barre() + `<main class="page large"><div class="admin">
     <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button></nav>
     <section>${onglet === 'archiviste' ? `<h1>Archiviste</h1><div id="suivi"></div>` : `<h1>Clients</h1>
       <div class="outils"><label class="cache-visuel" for="filtre">Rechercher</label><input id="filtre" type="search" placeholder="Nom, adresse, titre…"></div>
-      <ul class="adm-clients">${clients.map(c => `<li class="adm-client" data-f="${esc((c.nom + ' ' + c.emails.join(' ') + ' ' + c.arbres.map(titre).join(' ')).toLowerCase())}">
-        <div class="adm-tete"><div><b>${esc(c.nom || c.emails[0])}</b><div class="petit">${c.emails.map(esc).join(' · ')}${c.commandes.length ? ` · ${c.commandes.length} commande${c.commandes.length > 1 ? 's' : ''}` : ''}</div></div>
-          <div class="rangee">${c.commandes.length ? `<button class="btn" data-suivi="${esc(c.cle)}">Échanges</button>` : ''}<button class="btn" data-mod="${esc(c.cle)}">Accès</button><button class="btn" data-lien="${esc(c.emails[0])}">Envoyer un lien</button><button class="btn" data-comme="${esc(c.emails[0])}">Voir comme ce client</button></div></div>
-        ${c.arbres.length ? `<ul class="adm-arbres">${c.arbres.map(id => ligneArbre(id, c)).join('')}</ul>` : '<p class="petit">Aucun arbre ouvert à ce client.</p>'}</li>`).join('')}</ul>
-      ${orphelins.length ? `<h2 class="sv-h2">Arbres sans client</h2><ul class="adm-arbres">${orphelins.map(a => ligneArbre(a.id, null)).join('')}</ul>` : ''}
+      <ul class="adm-clients">${clients.map(ligneClient).join('')}</ul>
+      ${orphelins.length ? `<h2 class="sv-h2">Arbres sans client</h2><ul class="adm-clients">${orphelins.map(a => ligne(a.titre, court(a), a, a.validation, actionsArbre(a, true), (a.titre + ' ' + (a.sous_titre || '')).toLowerCase())).join('')}</ul>` : ''}
       <form class="form-compte" id="fc"><b>Créer ou modifier un accès</b>
         <label class="etiq" for="fc-email">Adresse e-mail du client</label><input id="fc-email" type="email" required>
         <div class="cases">${arbres.map(a => `<label><input type="checkbox" value="${esc(a.id)}"> ${esc(a.titre)}</label>`).join('')}</div>
         <div class="rangee"><button class="btn btn-1" type="submit">Enregistrer</button><label><input type="checkbox" id="fc-lien"> envoyer aussi un lien d’accès</label><span class="note-ok" id="fc-ok" role="status"></span></div></form>`}</section></div></main>`;
   brancherBarre();
   $app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => pageAdmin(b.dataset.t));
+  // un seul menu « ⋯ » ouvert à la fois ; il se referme après une action ou un clic ailleurs
+  const menus = [...$app.querySelectorAll('.adm-menu')];
+  menus.forEach(d => { d.addEventListener('toggle', () => { if (d.open) { menus.forEach(x => { if (x !== d) x.open = false; }); d.classList.remove('haut'); const r = d.querySelector('.adm-pop').getBoundingClientRect(); if (r.bottom > innerHeight - 8 && r.top - 52 > innerHeight - r.top) d.classList.add('haut'); } });
+    d.querySelectorAll('.adm-pop button').forEach(b => b.addEventListener('click', () => setTimeout(() => { if (b.dataset.lien === undefined) d.open = false; }, 0))); });
+  if (!pageAdmin.fermeMenus) { pageAdmin.fermeMenus = true; document.addEventListener('click', e => { if (!e.target.closest('.adm-menu')) document.querySelectorAll('.adm-menu[open]').forEach(x => x.open = false); }); }
   $app.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ouvrirArbre(b.dataset.o, b.dataset.v));
   $app.querySelectorAll('[data-rl]').forEach(b => b.onclick = () => relecture(arbres.find(a => a.id === b.dataset.rl), true));
   $app.querySelectorAll('[data-or]').forEach(b => b.onclick = () => orientation(arbres.find(a => a.id === b.dataset.or), true));
