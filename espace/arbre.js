@@ -331,6 +331,8 @@ export function creerArbre(racineEl, data, opt = {}) {
       ${avDe(id).length ? `<h3>Recherches à valider (admin, ${avDe(id).length})</h3><div class="liens actes">${avDe(id).map(([x, j]) => `<button data-av="${j}"><span><b>${esc(x.t)}</b><small>${esc([x.lib, x.f + ', ligne ' + x.l].filter(Boolean).join(' · '))}</small></span></button>`).join('')}</div>` : ''}
       ${opt.admin && (p.no || (p.src && p.src.length)) ? `<h3>Notes de recherche (admin)</h3><div class="note">${esc(p.no || '')}${p.src && p.src.length ? '\nSources : ' + esc(p.src.join(', ')) : ''}</div>` : ''}
       <div class="actions"><button class="btn btn-1" data-recentrer="${esc(id)}">Voir son arbre</button></div></div>`;
+    // 16/11/2026 : la fiche ouverte prend une entrée d'historique, le bouton « précédent » la referme
+    if (fiche.hidden && !(history.state && history.state.fiche)) history.pushState({...(history.state || {}), fiche: 1}, '');
     fiche.hidden = false; fiche.classList.remove('pleine');
     fiche.querySelector('.fermer').onclick = fermerFiche;
     fiche.querySelector('.poignee').onclick = () => fiche.classList.toggle('pleine');
@@ -342,7 +344,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     fiche.querySelectorAll('[data-av]').forEach(b => b.onclick = () => ouvrirAValider(+b.dataset.av));
     fiche.querySelector('.fermer').focus({preventScroll: true});
   }
-  function fermerFiche() { fiche.hidden = true; choisi = null; cartesEl.querySelectorAll('.choisie').forEach(c => c.classList.remove('choisie')); }
+  function fermerFiche() { if (!fiche.hidden && history.state && history.state.fiche) history.back(); fiche.hidden = true; choisi = null; cartesEl.querySelectorAll('.choisie').forEach(c => c.classList.remove('choisie')); }
   function voir(id) {
     if (!P[id] || P[id].cache) return;
     if (!positions[id]) recentrer(id); else centrerSur(id);

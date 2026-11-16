@@ -269,6 +269,37 @@ function ecranExpire(email) {
 
 // ---------------------------------------------------------------- espace connecté
 let U = null, vuComme = null, arbreActif = null;
+// 16/11/2026 (Laurent) : « précédent » revient à la page précédente au lieu de quitter l'appli.
+// Chaque page s'inscrit dans l'historique ; popstate la reconstruit.
+let restauration = false, cleCourante = null;
+const cleEtat = st => st && st.p ? [st.p, st.id || '', st.v || '', st.o || '', st.vc || ''].join('|') : null;
+function marquer(etat) {
+  etat = {...etat, vc: vuComme || ''};
+  const k = cleEtat(etat);
+  if (restauration) { cleCourante = k; return; }
+  if (k === cleCourante) return;
+  if (cleCourante === null) history.replaceState(etat, ''); else history.pushState(etat, '');
+  cleCourante = k;
+}
+addEventListener('popstate', async e => {
+  const st = e.state || {};
+  if (cleEtat(st) === cleCourante) { const f = document.querySelector('.fiche:not([hidden]) .fermer'); if (f && !st.fiche) f.click(); return; }
+  if (!st.p || !U || restauration) return;
+  restauration = true;
+  try {
+    vuComme = st.vc || null;
+    if (st.p === 'admin') await pageAdmin(st.o);
+    else if (st.p === 'accueil') { arbreActif = null; await accueil(); }
+    else if (st.p === 'arbre') await ouvrirArbre(st.id, st.v);
+    else {
+      const m = await S.meta(st.id); if (!m) return accueil();
+      if (m.livre && m.livre.etape === 'bat') m.validation = await S.validation(st.id).catch(() => null);
+      if (st.p === 'relire') await relecture(m, !!st.adm);
+      else if (st.p === 'orienter') await orientation(m, !!st.adm);
+      else if (st.p === 'partage') await pagePartage(m);
+    }
+  } catch (x) { console.error(x); } finally { restauration = false; }
+});
 function barre(titre = '', selecteur = '') {
   const prenom = U.prenom || '';
   return `<header class="barre">${LOGO}<div class="titre-livre">${esc(titre)}</div>${selecteur}
@@ -308,6 +339,7 @@ async function accueil() {
   const pdfPret = m => m.validation && m.livre && m.livre.pdf && m.livre.pdf.morceaux > 0;
   const libRelire = m => m.livre && m.livre.etape === 'bat' ? (m.validation ? 'Revoir le livre validé' : 'Relire le bon à tirer') : m.livre && m.livre.etape === 'premier_jet' ? 'Feuilleter le premier jet' : 'Relire le livre';
   if (metas.length === 1 && !vuComme && !relire(metas[0]) && !orienter(metas[0]) && !pdfPret(metas[0])) return ouvrirArbre(metas[0].id, 'client');
+  marquer({p: 'accueil'});
   document.title = 'Vos livres · Vos Racines';
   $app.innerHTML = barre() + `<main class="page"><h1>Vos livres</h1>
     ${metas.length ? `<div class="grille">${metas.map(m => `<article class="livre"><h2>${esc(m.titre)}</h2><p class="st">${esc(m.sous_titre || '')}</p>
@@ -327,6 +359,7 @@ async function accueil() {
 // 09/11/2026 (retour de Benjamin : « cela m'aurait été utile de pouvoir partager l'arbre pour demander une vérification ») :
 // un lien en lecture seule, sans compte, valable 30 jours, sans le livre ni les actes ; arrêt possible à tout moment.
 async function pagePartage(meta) {
+  marquer({p: 'partage', id: meta.id});
   arbreActif = {id: meta.id, version: 'partage'};
   document.title = `Partager ${meta.titre} · Vos Racines`;
   const lienDe = j => `${location.origin}${location.pathname}?partage=${j}`;
@@ -362,6 +395,7 @@ async function ouvrirPartage(j) {
   creerArbre(document.getElementById('arbre'), d, {admin: false, image: null, partage: true});
 }
 async function orientation(meta, admin) {
+  marquer({p: 'orienter', id: meta.id, adm: !!admin});
   arbreActif = {id: meta.id, version: 'orientation'};
   document.title = `Orienter ${meta.titre} · Vos Racines`;
   $app.innerHTML = barre(meta.titre) + `<main class="page">${admin ? `<div class="bandeau-admin statique"><label><input type="checkbox" id="or-ouvert" ${meta.orientation ? 'checked' : ''}> Orientation ouverte au client</label> <span class="petit">Vous voyez ce que verra le client ; vos propres choix ne comptent pas.</span></div><div id="or-recus"></div>` : ''}<div id="orientation"></div></main>`;
@@ -377,6 +411,7 @@ Ambiance : ${esc(c.ambiance)}` : ''}${c.creuser ? `
   ouvrirOrientation(document.getElementById('orientation'), meta, S, U, {admin, feuilleter: meta.livre ? () => relecture(meta, admin) : null});
 }
 async function relecture(meta, admin) {
+  marquer({p: 'relire', id: meta.id, adm: !!admin});
   arbreActif = {id: meta.id, version: 'relecture'};
   document.title = `Relire ${meta.titre} · Vos Racines`;
   $app.innerHTML = barre(meta.titre) + '<div id="relecture"></div>';
@@ -386,6 +421,7 @@ async function relecture(meta, admin) {
 const dateFr = d => { if (!d) return ''; const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('fr-FR', {day: 'numeric', month: 'long', year: 'numeric'}); };
 
 async function ouvrirArbre(id, version) {
+  marquer({p: 'arbre', id, v: version});
   arbreActif = {id, version};
   $app.innerHTML = '<div class="chargement">Chargement de l’arbre…</div>';
   let d;
@@ -413,6 +449,7 @@ const cleEmail = e => {
 };
 async function pageAdmin(onglet) {
   if (onglet === 'arbres') onglet = 'clients';
+  marquer({p: 'admin', o: onglet});
   document.title = 'Administration · Vos Racines';
   const [arbres, comptes, suivis] = await Promise.all([S.tousArbres(), S.comptes(), S.suivis ? S.suivis().catch(() => []) : []]);
   // 02/11/2026 (D1) : étape du livre et validation du bon à tirer, visibles dans l'onglet Clients
