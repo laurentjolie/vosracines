@@ -11,6 +11,8 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const params = new URLSearchParams(location.search);
 const DEV = params.get('dev');   // ?dev=client ou ?dev=admin : données locales (./dev/arbres), sans Firebase
 const LOGO = `<a class="logo" href="./"><img src="../img/sceau-simple.svg" alt=""><span>Vos Racines</span></a>`;
+const INSTALLEE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 const lire = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const ecrire = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
 
@@ -41,8 +43,8 @@ async function sourceFirebase() {
       cb({email: (u.email || '').toLowerCase(), admin: !!t.claims.admin});
     }),
     demanderLien: email => fb.addDoc(fb.collection(db, 'demandes_acces'), {email, cree: fb.serverTimestamp()}),
-    estLien: () => fb.isSignInWithEmailLink(auth, location.href),
-    entrerParLien: email => fb.signInWithEmailLink(auth, email, location.href),
+    estLien: (lien = location.href) => fb.isSignInWithEmailLink(auth, lien),
+    entrerParLien: (email, lien = location.href) => fb.signInWithEmailLink(auth, email, lien),
     compte: async email => { const d = await fb.getDoc(fb.doc(db, 'comptes', email)); return d.exists() ? d.data() : {arbres: []}; },
     meta: async id => { const d = await fb.getDoc(fb.doc(db, 'arbres', id)); return d.exists() ? {id, ...d.data()} : null; },
     tousArbres: async () => (await fb.getDocs(fb.collection(db, 'arbres'))).docs.map(d => ({id: d.id, ...d.data()})),
@@ -209,6 +211,9 @@ function ecranEnvoye(email) {
     <h1>Regardez votre boîte mail</h1>
     <p>Si l’adresse <b>${esc(email)}</b> est bien celle de votre livre, un e-mail de Vos Racines vient de partir. Ouvrez-le et cliquez sur le bouton « Ouvrir mon espace » : il vous fera entrer directement. Ce lien ne sert qu’une fois.</p>
     <div class="encart"><b>Vous ne voyez rien ?</b>L’e-mail peut mettre une ou deux minutes à arriver. Vérifiez aussi le dossier « Courrier indésirable » ou « Spam ». Si vous n’avez toujours rien, vous pouvez demander un nouveau lien.</div>
+    ${INSTALLEE ? `<form id="coller" novalidate><label class="etiq" for="lien">Vous utilisez l’application : dans l’e-mail, copiez le lien du bouton (appui long sur « Ouvrir mon espace », puis « Copier le lien ») et collez-le ici.</label>
+      <input id="lien" type="url" inputmode="url" autocomplete="off" placeholder="https://…">
+      <p class="msg-erreur" role="alert"></p><button class="btn btn-1" type="submit">Entrer avec ce lien</button></form>` : ''}
     <div class="rangee"><button class="btn" id="renvoi" disabled>Renvoyer le lien</button><button class="btn-lien" id="autre">Utiliser une autre adresse</button></div>
     <div class="pied-porte">Toujours bloqué ? <a href="mailto:${CONTACT}">${CONTACT}</a></div>
   </div></main>`;
@@ -217,6 +222,14 @@ function ecranEnvoye(email) {
   r.textContent = `Renvoyer le lien (dans ${n} s)`;
   r.onclick = async () => { r.disabled = true; try { await S.demanderLien(email); } catch (e) {} ecranEnvoye(email); };
   $app.querySelector('#autre').onclick = () => { clearInterval(t); ecrire('vr-email', null); ecranConnexion(); };
+  const fc = $app.querySelector('#coller');
+  if (fc) fc.addEventListener('submit', async e => {
+    e.preventDefault();
+    const lien = fc.querySelector('#lien').value.trim(), m = fc.querySelector('.msg-erreur');
+    if (!S.estLien(lien)) { m.textContent = 'Ce n’est pas le bon lien : copiez celui du bouton « Ouvrir mon espace » dans l’e-mail.'; return; }
+    try { await S.entrerParLien(email, lien); clearInterval(t); }
+    catch (err) { console.warn(err); m.textContent = 'Ce lien a expiré ou a déjà servi. Demandez-en un nouveau.'; }
+  });
 }
 function ecranEntrer(erreur = '', saisir = false) {   // page ouverte depuis l'e-mail : on ne consomme le lien qu'au clic (les antivirus « visitent » les liens)
   // 02/11/2026 : l'adresse retenue sur cet appareil peut être fausse (faute de frappe, autre personne, autre demande) :

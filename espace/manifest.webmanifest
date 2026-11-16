@@ -1,0 +1,17 @@
+{
+  "name": "Vos Racines",
+  "short_name": "Vos Racines",
+  "description": "Votre espace Vos Racines : arbre généalogique et livre de famille.",
+  "id": "/espace/",
+  "start_url": "/espace/?app=1",
+  "scope": "/espace/",
+  "display": "standalone",
+  "background_color": "#FBF6EC",
+  "theme_color": "#5A3A22",
+  "lang": "fr",
+  "icons": [
+    {"src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icones/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
