@@ -585,3 +585,10 @@ dialog.sv-apercu::backdrop{background:rgba(30,20,10,.55)}
 .kpi-curseur{stroke:var(--line-strong);stroke-width:1;vector-effect:non-scaling-stroke}
 .kpi-bulle{position:absolute;top:-30px;white-space:nowrap;background:var(--ink);color:var(--paper);font-size:13px;padding:3px 7px;border-radius:6px;pointer-events:none}
 .kpi-axe{display:flex;justify-content:space-between;margin-top:2px;font-size:12px!important}
+
+/* 16/11/2026 : source d'un fait repliée quand elle est longue */
+.evts details.pq summary{cursor:pointer;list-style:none}
+.evts details.pq summary::-webkit-details-marker{display:none}
+.evts details.pq summary::after{content:" lire la suite";color:var(--link);text-decoration:underline}
+.evts details.pq[open] summary{display:none}
+.evts details.pq p{margin:0}
