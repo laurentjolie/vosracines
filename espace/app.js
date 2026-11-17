@@ -545,7 +545,12 @@ async function pageAdmin(onglet) {
     // 17/11/2026 (Laurent) : un cadeau se lit « livre d'Hélène : BAT à valider », et chaque arbre du client a son état
     const pourDe = x => { const s = c.commandes.find(k => (k.arbres || []).includes(x.id) && k.pour && !String(c.nom || '').toLowerCase().startsWith(String(k.pour).toLowerCase())); if (!s) return '';
       const p = String(s.pour).trim(); return `livre ${/^[aeiouyhâàéèêëîïôöûüÉÈÊÂÎÔÛ]/i.test(p) ? "d'" : 'de '}${p} : `; };
-    return ligne(c.nom || c.emails[0], as.length ? as.map(x => pourDe(x) + court(x)).join(' · ') : court(a), a, a && a.validation, menu,
+    // 17/11/2026 (Laurent) : passes de recherche par version (comptées depuis le 02/11), y compris la version en cours
+    const P = c.commandes.map(k => k.passes).filter(x => x && x.par_version);
+    const passesCourt = P.map(x => `${x.par_version[x.version] || 0}/${x.plafond} passes (V${x.version}${x.en_cours ? ', en cours' : ''})`).join(' · ');
+    const passesDetail = P.map(x => 'Passes : ' + Object.keys(x.par_version).sort((u, v) => u - v).map(v => `V${v} ${x.par_version[v]}${+v === x.version ? `/${x.plafond}${x.en_cours ? ' en cours' : ''}` : ''}`).join(' · ')).join('<br>');
+    const menuP = passesDetail ? menu.replace('</div>', `<br>${passesDetail}<br><span class="petit">comptées depuis le 02/11</span></div>`) : menu;
+    return ligne(c.nom || c.emails[0], (as.length ? as.map(x => pourDe(x) + court(x)).join(' · ') : court(a)) + (passesCourt ? ' · ' + passesCourt : ''), a, a && a.validation, menuP,
       (c.nom + ' ' + c.emails.join(' ') + ' ' + c.arbres.map(titre).join(' ')).toLowerCase(), ferme); };
   $app.innerHTML = barre() + `<main class="page large"><div class="admin">
     <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button></nav>
