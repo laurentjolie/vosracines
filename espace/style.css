@@ -599,3 +599,6 @@ dialog.sv-apercu::backdrop{background:rgba(30,20,10,.55)}
 .travail ul,.travail ol{margin:0;padding-left:20px}.travail li{margin:2px 0}
 .travail .maj-travail{grid-column:1/-1;margin:2px 0 0;font-size:12px}
 @media (max-width:640px){.travail{grid-template-columns:1fr}}
+
+/* 17/11/2026 parcours gratuit : choix « pour qui » */
+.choix{border:0;padding:0;margin:14px 0 6px}.choix label{display:flex;gap:10px;align-items:center;margin:8px 0;font-size:1rem}.choix input{width:auto;min-height:0}
