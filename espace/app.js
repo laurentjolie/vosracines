@@ -501,6 +501,13 @@ async function pageAdmin(onglet) {
     g.commandes.push(s); if (s.client) g.noms.add(String(s.client).trim()); (s.arbres || []).forEach(a => g.arbres.add(a));
   }
   for (const a of arbres) for (const e of a.lecteurs || []) { const g = groupe(e); g.emails.add(e); g.arbres.add(a.id); }
+  // 17/11/2026 (Laurent : « ré-attribuer les arbres sans client ») : l'arbre de travail d'une commande (cmd-<prénom>-<6 derniers caractères de la commande>)
+  // va au client de cette commande, même quand il n'en est pas lecteur (il voit l'arbre de son livre).
+  for (const a of arbres) {
+    const m = /^cmd-.*-([a-z0-9]{6})$/.exec(a.id); if (!m) continue;
+    const s = suivis.find(x => String(x.court || '').toLowerCase() === m[1]); const em = s && (s.emails || [])[0];
+    if (em) groupe(em).arbres.add(a.id);
+  }
   const clients = [...G.values()].map(g => ({...g, emails: [...g.emails], arbres: [...g.arbres], nom: [...g.noms].sort((x, y) => y.length - x.length)[0] || ''}))
     .sort((a, b) => (b.commandes.length ? 1 : 0) - (a.commandes.length ? 1 : 0) || a.cle.localeCompare(b.cle));
   const avecClient = new Set(clients.flatMap(c => c.arbres));
