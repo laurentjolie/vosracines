@@ -542,7 +542,10 @@ async function pageAdmin(onglet) {
     const menu = `<div class="adm-info">${c.emails.map(esc).join('<br>')}${c.commandes.length ? `<br>${c.commandes.length} commande${c.commandes.length > 1 ? 's' : ''}` : ''}</div>
       ${c.commandes.length ? `<button data-suivi="${esc(c.cle)}">Échanges</button>` : ''}<button data-mod="${esc(c.cle)}">Accès</button><button data-lien="${esc(c.emails[0])}">Envoyer un lien</button><button data-comme="${esc(c.emails[0])}">Voir comme ce client</button>
       ${as.map((x, k) => '<hr>' + actionsArbre(x, k === 0)).join('')}`;
-    return ligne(c.nom || c.emails[0], court(a) + (as.length > 1 ? ` · +${as.length - 1} arbre${as.length > 2 ? 's' : ''}` : ''), a, a && a.validation, menu,
+    // 17/11/2026 (Laurent) : un cadeau se lit « livre d'Hélène : BAT à valider », et chaque arbre du client a son état
+    const pourDe = x => { const s = c.commandes.find(k => (k.arbres || []).includes(x.id) && k.pour && !String(c.nom || '').toLowerCase().startsWith(String(k.pour).toLowerCase())); if (!s) return '';
+      const p = String(s.pour).trim(); return `livre ${/^[aeiouyhâàéèêëîïôöûüÉÈÊÂÎÔÛ]/i.test(p) ? "d'" : 'de '}${p} : `; };
+    return ligne(c.nom || c.emails[0], as.length ? as.map(x => pourDe(x) + court(x)).join(' · ') : court(a), a, a && a.validation, menu,
       (c.nom + ' ' + c.emails.join(' ') + ' ' + c.arbres.map(titre).join(' ')).toLowerCase(), ferme); };
   $app.innerHTML = barre() + `<main class="page large"><div class="admin">
     <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button></nav>
