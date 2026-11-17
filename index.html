@@ -102,6 +102,7 @@ header.top{display:flex;justify-content:space-between;align-items:center;gap:16p
 .offers{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;align-items:stretch}
 .offer{border:1px solid var(--line);border-radius:4px;padding:28px 24px;display:flex;flex-direction:column;gap:12px;background:var(--card);min-width:0}
 .offer.main{border:2px solid var(--gold)}
+.offer.essai{margin-top:20px;border-style:dashed}.offer.essai .essai-titre{font-size:22px;line-height:1.3}.offer.essai .btn{align-self:flex-start}
 .offer .name{font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--rubric)}
 .offer .price{font-size:56px;line-height:1;font-variant-numeric:lining-nums}
 .offer .price small{font-size:18px;color:var(--ink-soft)}
@@ -315,16 +316,17 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
         <p class="sub">Un livre qui raconte sa famille : les ancêtres retrouvés dans les registres, leurs actes, leurs villages, leurs métiers. Le cadeau qu'on garde, et qu'on se passe d'une génération à l'autre.</p>
         <div class="ctas">
           <a class="btn" href="#offrir">Offrir le livre numérique, 49 €</a>
+          <a class="btn ghost" href="espace/#inscription">Commencer gratuitement</a>
           <a class="btn ghost" href="#livre">Feuilleter un exemple</a>
         </div>
-        <p class="prix-clair"><b>49 € le livre numérique</b>, relu avec vous (prix de lancement). En papier : 29 € par exemplaire relié, en plus, si vous le voulez.</p>
+        <p class="prix-clair"><b>49 € le livre numérique</b>, relu avec vous (prix de lancement). En papier : 29 € par exemplaire relié, en plus, si vous le voulez. <b>Ou essayez d'abord, gratuitement</b> : nous commençons l'arbre généalogique de votre famille, et vous décidez en le voyant.</p>
         <div hidden>
         </div>
         <div class="proof"><span>Deux relectures avec vous</span><span>Remboursé si les archives sont trop pauvres</span><span>Rien sur les vivants</span></div>
       </div>
       <figure class="dos">
         <img src="img/carte-ancetres.jpg?v=2" alt="La carte des ancêtres d'un livre réalisé : la France entière, chaque village de la famille marqué d'un cercle aux couleurs de sa lignée" width="1100" height="1040">
-        <figcaption>La carte des ancêtres d'un livre réalisé, une couleur par lignée. Les villages sont légèrement déplacés, pour que la famille reste anonyme.</figcaption>
+        <figcaption>La carte des ancêtres d'un livre réalisé, une couleur par lignée.</figcaption>
       </figure>
     </div>
   </div>
@@ -441,7 +443,6 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
           <ul><li>Un chapitre par lignée : l'arbre généalogique, le récit, les actes, les villages</li><li>Les records, les prénoms, les métiers et les noms de la famille</li><li>Le livre numérique (PDF), à relire avant impression</li></ul>
           <p class="price-total">Les exemplaires reliés se commandent ensuite, une fois le livre vu en numérique.</p>
           <a class="btn" href="https://buy.stripe.com/28EcN686f7xI7NCarbgYU00">Mettre dans le panier</a>
-          <p class="note" style="margin-top:14px"><b>Ou commencez gratuitement :</b> nous démarrons l'arbre généalogique de votre famille, et vous le voyez en ligne dès qu'il compte une dizaine d'ancêtres. Vous décidez ensuite. <a href="espace/#inscription">Commencer gratuitement</a></p>
           <p class="note" style="margin-top:10px">Paiement sur une page sécurisée Stripe, où se saisit aussi un code promo. Notre archiviste vous écrit juste après : pour vous ou pour offrir, tout se règle par mail, surprise comprise.</p>
         </div>
         <div class="opts" role="region" aria-label="Exemplaires et option" tabindex="0" style="margin-top:0">
@@ -453,6 +454,13 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
             </tbody>
           </table>
         </div>
+      </div>
+      <div class="offer essai">
+        <p class="name">Essayer d'abord, gratuitement</p>
+        <p class="essai-titre">L'arbre généalogique de votre famille, commencé pour vous</p>
+        <ul><li>Notre archiviste vous écrit pour rassembler ce que vous savez</li><li>Nous partons dans les registres, et l'arbre s'ouvre dans votre espace dès qu'il compte une dizaine d'ancêtres sur quatre générations</li><li>Vous décidez ensuite si nous poursuivons les recherches et écrivons le livre</li></ul>
+        <a class="btn ghost" href="espace/#inscription">Commencer gratuitement</a>
+        <p class="note">Sans carte bancaire, sans engagement. Pour vous ou pour un proche.</p>
       </div>
       <div class="extras">
         <span><b>Livre surprise</b> pour offrir sans rien savoir des noms : la surprise est gardée jusqu'au livre</span>
