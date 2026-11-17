@@ -592,3 +592,10 @@ dialog.sv-apercu::backdrop{background:rgba(30,20,10,.55)}
 .evts details.pq summary::after{content:" lire la suite";color:var(--link);text-decoration:underline}
 .evts details.pq[open] summary{display:none}
 .evts details.pq p{margin:0}
+
+/* 17/11/2026 : ce sur quoi l'archiviste travaille */
+.travail{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:0 0 14px}
+.travail h2{font-size:15px;font-family:var(--f-ui);font-weight:600;color:var(--ink-soft);margin:0 0 4px;text-transform:uppercase;letter-spacing:.06em}
+.travail ul,.travail ol{margin:0;padding-left:20px}.travail li{margin:2px 0}
+.travail .maj-travail{grid-column:1/-1;margin:2px 0 0;font-size:12px}
+@media (max-width:640px){.travail{grid-template-columns:1fr}}

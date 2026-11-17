@@ -118,7 +118,8 @@ async function sourceFirebase() {
         .forEach(d => { const x = JSON.parse(d.data().d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); });
       return {...out, titre: m.titre, sous_titre: m.sous_titre, expire: m.expire && m.expire.toDate(), racine: '@1'};
     },
-    suivis: async () => (await fb.getDocs(fb.collection(db, 'suivi'))).docs.map(d => ({...JSON.parse(d.data().d), maj: d.data().maj || ''})),
+    suivis: async () => (await fb.getDocs(fb.collection(db, 'suivi'))).docs.filter(d => !d.id.startsWith('_')).map(d => ({...JSON.parse(d.data().d), maj: d.data().maj || ''})),
+    travail: async () => { const d = await fb.getDoc(fb.doc(db, 'suivi', '_travail')); return d.exists() ? {...JSON.parse(d.data().d), maj: d.data().maj || ''} : null; },
     // 09/11 : une pièce jointe de mail (pj/{id}, morceaux base64) rendue en Blob
     pj: async id => {
       const m = await fb.getDoc(fb.doc(db, 'pj', id)); if (!m.exists()) throw new Error('pièce pas encore publiée par HQ (dix minutes au plus)');
@@ -166,6 +167,7 @@ async function sourceDev() {   // données locales pour essayer l'interface sans
     deposer: async (id, m, parts) => { const x = {...m, id: 'd' + Date.now(), complet: true}; devDepots.push(x); return x.id; },
     supprimerDepot: async (id, did) => { devDepots = devDepots.filter(x => x.id !== did); },
     suivis: async () => { try { return await (await fetch('dev/suivi.json')).json(); } catch (e) { return []; } },
+    travail: async () => { try { return await (await fetch('dev/travail.json')).json(); } catch (e) { return null; } },
   };
 }
 
@@ -484,11 +486,22 @@ function dessinerKpis(el, suivis, arbres) {
     g.addEventListener('pointerleave', () => { cur.hidden = true; bulle.hidden = true; });
   });
 }
+// 17/11/2026 (Laurent) : en haut de l'admin, les deux ou trois arbres sur lesquels l'archiviste travaille, et la file ; pas le détail.
+function blocTravail(t) {
+  if (!t) return '';
+  const h = x => String(x || '').slice(11, 16);
+  const ligne = e => e.quoi === 'recherche' ? `<li><b>${esc(e.arbre || e.qui)}</b>${e.arbre && e.qui && !e.arbre.includes(e.qui) ? ` <span class="petit">(${esc(e.qui)})</span>` : ''}<span class="petit">${e.passe ? ` · passe ${esc(e.passe)} sur ${esc(e.sur)}` : ''}${e.depuis ? ` · depuis ${esc(h(e.depuis))}` : ''}</span></li>`
+    : e.quoi === 'livre' ? `<li><b>Livre : ${esc(e.livre)}</b> <span class="petit">(nouvelle version)</span></li>` : `<li><b>${esc(e.qui)}</b></li>`;
+  const suite = (t.file || []).slice(0, 4).map(e => `<li>${esc(e.arbre || e.qui)}${e.arbre && e.qui && !e.arbre.includes(e.qui) ? ` <span class="petit">(${esc(e.qui)})</span>` : ''}${e.reprise ? ` <span class="petit">· vers ${esc(e.reprise)}</span>` : ''}</li>`).join('');
+  return `<section class="travail"><div><h2>En ce moment</h2>${(t.en_cours || []).length ? `<ul>${t.en_cours.map(ligne).join('')}</ul>` : '<p class="petit">L’archiviste ne cherche rien en ce moment.</p>'}</div>
+    <div><h2>Ensuite</h2>${suite ? `<ol>${suite}</ol>` : '<p class="petit">Rien en attente.</p>'}${(t.sommeil || []).length ? `<p class="petit">En sommeil, en attente de faits nouveaux : ${t.sommeil.map(e => esc(e.arbre || e.qui)).join(', ')}</p>` : ''}</div>
+    <p class="petit maj-travail">Mis à jour à ${esc(h(t.maj))}</p></section>`;
+}
 async function pageAdmin(onglet) {
   if (onglet === 'arbres') onglet = 'clients';
   marquer({p: 'admin', o: onglet});
   document.title = 'Administration · Vos Racines';
-  const [arbres, comptes, suivis] = await Promise.all([S.tousArbres(), S.comptes(), S.suivis ? S.suivis().catch(() => []) : []]);
+  const [arbres, comptes, suivis, travail] = await Promise.all([S.tousArbres(), S.comptes(), S.suivis ? S.suivis().catch(() => []) : [], S.travail ? S.travail().catch(() => null) : null]);
   // 02/11/2026 (D1) : étape du livre et validation du bon à tirer, visibles dans l'onglet Clients
   await Promise.all(arbres.filter(a => a.livre && a.livre.etape === 'bat').map(async a => { a.validation = await S.validation(a.id).catch(() => null); }));
   // un client = toutes ses adresses (comptes de l'espace, adresses des commandes), regroupées par boîte réelle
@@ -534,11 +547,12 @@ async function pageAdmin(onglet) {
   $app.innerHTML = barre() + `<main class="page large"><div class="admin">
     <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button></nav>
     <section>${onglet === 'archiviste' ? `<h1>Archiviste</h1><div id="suivi"></div>` : `<h1>Clients</h1>
+      ${blocTravail(travail)}
       <div class="kpis" id="kpis"></div>
       <div class="outils"><label class="cache-visuel" for="filtre">Rechercher</label><input id="filtre" type="search" placeholder="Nom, adresse, titre…"></div>
       <ul class="adm-clients">${clients.map(ligneClient).join('')}</ul>
       ${orphelins.length ? `<h2 class="sv-h2">Arbres sans client</h2><ul class="adm-clients">${orphelins.map(a => ligne(a.titre, court(a), a, a.validation, actionsArbre(a, true), (a.titre + ' ' + (a.sous_titre || '')).toLowerCase())).join('')}</ul>` : ''}
-      <form class="form-compte" id="fc"><b>Créer ou modifier un accès</b>
+      <form class="form-compte" id="fc" hidden><b>Modifier un accès</b>
         <label class="etiq" for="fc-email">Adresse e-mail du client</label><input id="fc-email" type="email" required>
         <div class="cases">${arbres.map(a => `<label><input type="checkbox" value="${esc(a.id)}"> ${esc(a.titre)}</label>`).join('')}</div>
         <div class="rangee"><button class="btn btn-1" type="submit">Enregistrer</button><label><input type="checkbox" id="fc-lien"> envoyer aussi un lien d’accès</label><span class="note-ok" id="fc-ok" role="status"></span></div></form>`}</section></div></main>`;
@@ -574,7 +588,7 @@ async function pageAdmin(onglet) {
       const compte = comptes.find(x => cleEmail(x.email) === c.cle) || {email: c.emails[0], arbres: c.arbres};
       fc.querySelector('#fc-email').value = compte.email;
       fc.querySelectorAll('.cases input').forEach(i => i.checked = (compte.arbres || []).includes(i.value));
-      fc.scrollIntoView({behavior: 'smooth'});
+      fc.hidden = false; fc.scrollIntoView({behavior: 'smooth'});
     });
     $app.querySelectorAll('[data-lien]').forEach(b => b.onclick = async () => { b.disabled = true; await S.envoyerLienA(b.dataset.lien); b.textContent = 'Lien envoyé'; });
     $app.querySelectorAll('[data-comme]').forEach(b => b.onclick = () => { vuComme = b.dataset.comme; accueil(); });
