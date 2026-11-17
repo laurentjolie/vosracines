@@ -43,6 +43,7 @@ async function sourceFirebase() {
       cb({email: (u.email || '').toLowerCase(), admin: !!t.claims.admin});
     }),
     demanderLien: email => fb.addDoc(fb.collection(db, 'demandes_acces'), {email, cree: fb.serverTimestamp()}),
+    inscrire: (email, inscription) => fb.addDoc(fb.collection(db, 'demandes_acces'), {email, cree: fb.serverTimestamp(), inscription}),   // 17/11/2026 parcours gratuit
     estLien: (lien = location.href) => fb.isSignInWithEmailLink(auth, lien),
     entrerParLien: (email, lien = location.href) => fb.signInWithEmailLink(auth, email, lien),
     compte: async email => { const d = await fb.getDoc(fb.doc(db, 'comptes', email)); return d.exists() ? d.data() : {arbres: []}; },
@@ -208,10 +209,47 @@ function ecranConnexion(erreur = '', valeur = lire('vr-email') || '') {
     ecrire('vr-email', v); ecranEnvoye(v);
   });
 }
-function ecranEnvoye(email) {
+// 17/11/2026 (parcours gratuit, feu vert de Laurent) : on commence sans payer ; le lien reçu par e-mail confirme l'adresse,
+// puis l'archiviste écrit. L'arbre généalogique s'ouvre à une dizaine d'ancêtres ; la suite (recherches complètes, livre) est payante.
+function ecranInscription(erreur = '', v = {}) {
+  document.title = 'Commencer gratuitement · Vos Racines';
+  $app.innerHTML = `<main class="porte"><div class="carte-porte">${LOGO}
+    <h1>Commencer gratuitement</h1>
+    <p class="sous">Nous commençons l’arbre généalogique de votre famille, sans engagement. Dès qu’il compte une dizaine d’ancêtres sur quatre générations, il s’ouvre dans votre espace.</p>
+    <form novalidate>
+      <label class="etiq" for="prenom">Votre prénom</label>
+      <input id="prenom" type="text" autocomplete="given-name" maxlength="60" value="${esc(v.prenom || '')}">
+      <label class="etiq" for="email">Votre adresse e-mail</label>
+      <input id="email" type="email" autocomplete="email" inputmode="email" maxlength="190" value="${esc(v.email || lire('vr-email') || '')}" ${erreur ? 'class="erreur" aria-invalid="true"' : ''}>
+      <fieldset class="choix"><legend class="etiq">Pour qui ?</legend>
+        <label><input type="radio" name="pourqui" value="moi" ${v.pourqui !== 'offrir' ? 'checked' : ''}> Ma famille</label>
+        <label><input type="radio" name="pourqui" value="offrir" ${v.pourqui === 'offrir' ? 'checked' : ''}> La famille d’un proche, pour lui offrir</label>
+      </fieldset>
+      <div id="dest" ${v.pourqui === 'offrir' ? '' : 'hidden'}><label class="etiq" for="dest_prenom">Son prénom</label>
+        <input id="dest_prenom" type="text" maxlength="40" value="${esc(v.dest_prenom || '')}"></div>
+      <p class="msg-erreur" id="err" role="alert">${esc(erreur)}</p>
+      <button class="btn btn-1" type="submit">Commencer</button>
+    </form>
+    <p class="petit" style="margin-top:12px">Vous recevez un e-mail de confirmation. Ensuite, notre archiviste vous écrit pour rassembler ce que vous savez de la famille. Pour aller plus loin (les recherches complètes et le livre, 49 €), vous déciderez une fois l’arbre vu.</p>
+    <div class="pied-porte">Déjà client ? <a href="./">Entrer dans mon espace</a></div>
+  </div></main>`;
+  const f = $app.querySelector('form'), val = () => ({prenom: f.querySelector('#prenom').value.trim(), email: f.querySelector('#email').value.trim().toLowerCase(),
+    pourqui: (f.querySelector('input[name=pourqui]:checked') || {}).value || 'moi', dest_prenom: f.querySelector('#dest_prenom').value.trim()});
+  f.querySelectorAll('input[name=pourqui]').forEach(r => r.onchange = () => { $app.querySelector('#dest').hidden = val().pourqui !== 'offrir'; });
+  f.addEventListener('submit', async e => {
+    e.preventDefault(); const x = val();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x.email) || /[^\x21-\x7e]/.test(x.email)) return ecranInscription('Cette adresse e-mail ne semble pas complète (sans accent ni espace, avec un @ et un point).', x);
+    f.querySelector('button').disabled = true;
+    try { await S.inscrire(x.email, {prenom: x.prenom.slice(0, 60), pourqui: x.pourqui, dest_prenom: x.pourqui === 'offrir' ? x.dest_prenom.slice(0, 40) : ''}); }
+    catch (err) { console.warn(err); return ecranInscription('L’inscription n’a pas pu partir. Réessayez dans un instant, ou écrivez-nous.', x); }
+    ecrire('vr-email', x.email); ecranEnvoye(x.email, true);
+  });
+}
+function ecranEnvoye(email, inscription = false) {
   $app.innerHTML = `<main class="porte"><div class="carte-porte">${LOGO}
     <h1>Regardez votre boîte mail</h1>
-    <p>Si l’adresse <b>${esc(email)}</b> est bien celle de votre livre, un e-mail de Vos Racines vient de partir. Ouvrez-le et cliquez sur le bouton « Ouvrir mon espace » : il vous fera entrer directement. Ce lien ne sert qu’une fois.</p>
+    ${inscription ? `<p>Un e-mail de confirmation vient de partir à <b>${esc(email)}</b>. Ouvrez-le et cliquez sur « Confirmer mon inscription » : notre archiviste vous écrit juste après.</p>`
+      : `<p>Si l’adresse <b>${esc(email)}</b> est bien celle de votre livre, un e-mail de Vos Racines vient de partir. Ouvrez-le et cliquez sur le bouton « Ouvrir mon espace » : il vous fera entrer directement. Ce lien ne sert qu’une fois.</p>`}
     <div class="encart"><b>Vous ne voyez rien ?</b>L’e-mail peut mettre une ou deux minutes à arriver. Vérifiez aussi le dossier « Courrier indésirable » ou « Spam ». Si vous n’avez toujours rien, vous pouvez demander un nouveau lien.</div>
     ${INSTALLEE ? `<form id="coller" novalidate><label class="etiq" for="lien">Vous utilisez l’application : dans l’e-mail, copiez le lien du bouton (appui long sur « Ouvrir mon espace », puis « Copier le lien ») et collez-le ici.</label>
       <input id="lien" type="url" inputmode="url" autocomplete="off" placeholder="https://…">
@@ -349,6 +387,7 @@ async function accueil() {
       <div class="rangee"><button class="btn btn-1" data-o="${esc(m.id)}">Ouvrir l’arbre</button>${!vuComme ? `<button class="btn" data-partager="${esc(m.id)}">Partager l’arbre</button>` : ''}${orienter(m) ? `<button class="btn btn-2" data-orienter="${esc(m.id)}">Orienter mon livre</button>` : ''}${relire(m) ? `<button class="btn" data-relire="${esc(m.id)}">${libRelire(m)}</button>` : ''}${pdfPret(m) ? `<button class="btn btn-1" data-pdf="${esc(m.id)}">Télécharger le livre (PDF)</button>` : ''}</div>
       ${m.validation ? `<p class="maj">Validé pour l’impression le ${esc(dateFr(m.validation.quand))}.</p>` : ''}
       <p class="maj">Mis à jour le ${esc(dateFr(m.maj))}</p></article>`).join('')}</div>`
+    : c.inscription ? `<p><b>Votre inscription est confirmée.</b> Notre archiviste vous écrit par e-mail pour rassembler ce que vous savez de la famille. Votre arbre généalogique apparaîtra ici dès qu’il comptera une dizaine d’ancêtres.</p><p>Une question ? <a href="mailto:${CONTACT}">${CONTACT}</a></p>`
     : `<p>Votre arbre n’est pas encore en ligne. Nous vous écrirons dès qu’il le sera. Une question ? <a href="mailto:${CONTACT}">${CONTACT}</a></p>`}</main>`;
   brancherBarre();
   $app.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ouvrirArbre(b.dataset.o, 'client'));
@@ -612,7 +651,7 @@ async function pageAdmin(onglet) {
   let premier = true;
   S.onUtilisateur(u => {
     U = u;
-    if (!u) { if (!S.estLien()) ecranConnexion(); return; }
+    if (!u) { if (!S.estLien()) (location.hash === '#inscription' ? ecranInscription() : ecranConnexion()); return; }
     if (premier || !arbreActif) { premier = false; accueil(); }
   });
 })();

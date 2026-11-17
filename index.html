@@ -102,6 +102,8 @@ header.top{display:flex;justify-content:space-between;align-items:center;gap:16p
 .offers{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;align-items:stretch}
 .offer{border:1px solid var(--line);border-radius:4px;padding:28px 24px;display:flex;flex-direction:column;gap:12px;background:var(--card);min-width:0}
 .offer.main{border:2px solid var(--gold)}
+.contact-rapide{margin:22px 0 6px;max-width:640px}.contact-rapide label{display:block;margin-bottom:10px;line-height:1.5}.contact-rapide .cr-ligne{display:flex;gap:10px;flex-wrap:wrap}.contact-rapide input{flex:1 1 220px;min-width:0;padding:12px 14px;font:16px var(--f-ui);border:1px solid var(--line);border-radius:10px;background:var(--card);color:inherit}.contact-rapide .cr-err{margin:6px 0 0;color:#a8441e;font:14px var(--f-ui);min-height:1em}
+.offer.essai{margin-top:20px;border-style:dashed}.offer.essai .essai-titre{font-size:22px;line-height:1.3}.offer.essai .btn{align-self:flex-start}
 .offer .name{font-size:14px;letter-spacing:.22em;text-transform:uppercase;color:var(--rubric)}
 .offer .price{font-size:56px;line-height:1;font-variant-numeric:lining-nums}
 .offer .price small{font-size:18px;color:var(--ink-soft)}
@@ -315,9 +317,11 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
         <p class="sub">Un livre qui raconte sa famille : les ancêtres retrouvés dans les registres, leurs actes, leurs villages, leurs métiers. Le cadeau qu'on garde, et qu'on se passe d'une génération à l'autre.</p>
         <div class="ctas">
           <a class="btn" href="#offrir">Offrir le livre numérique, 49 €</a>
+          <a class="btn ghost" href="espace/#inscription">Commencer gratuitement</a>
           <a class="btn ghost" href="#livre">Feuilleter un exemple</a>
         </div>
-        <p class="prix-clair"><b>49 € le livre numérique</b>, relu avec vous (prix de lancement). En papier : 29 € par exemplaire relié, en plus, si vous le voulez.</p>
+        <p class="prix-clair"><b>49 € le livre numérique</b>, relu avec vous (prix de lancement). En papier : 29 € par exemplaire relié, en plus, si vous le voulez. <b>Ou essayez d'abord, gratuitement</b> : nous commençons l'arbre généalogique de votre famille, et vous décidez en le voyant.</p>
+        <form class="contact-rapide" data-contact="haut" novalidate><label for="cr-haut"><b>Intéressé ? Prenons contact.</b> Laissez votre adresse e-mail : nous commençons l'arbre généalogique de votre famille, gratuitement.</label><div class="cr-ligne"><input id="cr-haut" type="email" inputmode="email" autocomplete="email" placeholder="votre@adresse.fr" required><button class="btn" type="submit">Prenons contact</button></div><p class="cr-err" role="alert"></p></form>
         <div hidden>
         </div>
         <div class="proof"><span>Deux relectures avec vous</span><span>Remboursé si les archives sont trop pauvres</span></div>
@@ -410,6 +414,7 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
         <li><span class="n">5</span><b>Vous relisez</b><span>En deux temps : un premier jet que vous commentez, puis le bon à tirer, pour vos dernières corrections avant l'impression.</span></li>
         <li><span class="n">6</span><b>Le livre arrive</b><span>Dès qu'il est prêt : quelques jours à quelques semaines selon les archives. Les exemplaires reliés suivent une dizaine de jours plus tard.</span></li>
       </ol>
+      <form class="contact-rapide" data-contact="etapes" novalidate><label for="cr-etapes"><b>Intéressé ? Prenons contact.</b> Laissez votre adresse e-mail : nous commençons l'arbre généalogique de votre famille, gratuitement.</label><div class="cr-ligne"><input id="cr-etapes" type="email" inputmode="email" autocomplete="email" placeholder="votre@adresse.fr" required><button class="btn" type="submit">Prenons contact</button></div><p class="cr-err" role="alert"></p></form>
       <div class="five" style="margin-bottom:24px">
         <b>Le mur des premiers ancêtres</b>
         <p style="margin-top:8px;color:var(--ink-soft)">Le plus difficile, ce sont souvent les premières générations. Les actes de moins de 75 ans ne sont en général pas en ligne : il faut les retrouver dans les papiers de famille ou les demander en mairie. Une fois ce mur franchi, les registres numérisés par les archives départementales permettent de remonter beaucoup plus vite, souvent jusqu'au XVIII<sup>e</sup> siècle, parfois au-delà. C'est pour cela que tout commence par un échange avec vous, et que nous remboursons si le mur ne cède pas.</p>
@@ -454,6 +459,13 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
           </table>
         </div>
       </div>
+      <div class="offer essai">
+        <p class="name">Essayer d'abord, gratuitement</p>
+        <p class="essai-titre">L'arbre généalogique de votre famille, commencé pour vous</p>
+        <ul><li>Notre archiviste vous écrit pour rassembler ce que vous savez</li><li>Nous partons dans les registres, et l'arbre s'ouvre dans votre espace dès qu'il compte une dizaine d'ancêtres sur quatre générations</li><li>Vous décidez ensuite si nous poursuivons les recherches et écrivons le livre</li></ul>
+        <a class="btn ghost" href="espace/#inscription">Commencer gratuitement</a>
+        <p class="note">Sans carte bancaire, sans engagement. Pour vous ou pour un proche.</p>
+      </div>
       <div class="extras">
         <span><b>Livre surprise</b> pour offrir sans rien savoir des noms : la surprise est gardée jusqu'au livre</span>
       </div>
@@ -474,6 +486,7 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
         <details><summary>Tout est-il prouvé ?</summary><p>Ce que racontent les chapitres vient des actes. Quand un fait vient d'un arbre généalogique publié par d'autres chercheurs et n'a pas encore été vérifié, le livre le dit.</p></details>
         <details><summary>Quelle place pour l'IA ?</summary><p>Une IA lit les registres et prépare le texte : c'est ce qui rend ce livre abordable. Chaque fait du livre s'appuie sur un acte ou est présenté comme une piste, et vous relisez le livre avant impression.</p></details>
       </div>
+      <form class="contact-rapide" data-contact="fin" novalidate><label for="cr-fin"><b>Intéressé ? Prenons contact.</b> Laissez votre adresse e-mail : nous commençons l'arbre généalogique de votre famille, gratuitement.</label><div class="cr-ligne"><input id="cr-fin" type="email" inputmode="email" autocomplete="email" placeholder="votre@adresse.fr" required><button class="btn" type="submit">Prenons contact</button></div><p class="cr-err" role="alert"></p></form>
     </div>
   </section>
 </main>
@@ -530,4 +543,17 @@ var STRIPE = { livre: 'https://buy.stripe.com/28EcN686f7xI7NCarbgYU00', livre_do
 })();
 </script>
 
+<script>
+// 18/11/2026 (retour de Paul : « il manque l'endroit où mettre son mail ») : « Intéressé ? Prenons contact. » à trois endroits ;
+// l'adresse est gardée dans le navigateur et pré-remplit l'écran d'inscription gratuite de l'espace.
+document.querySelectorAll('.contact-rapide').forEach(function (f) {
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = f.querySelector('input').value.trim().toLowerCase(), err = f.querySelector('.cr-err');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /[^\x21-\x7e]/.test(v)) { err.textContent = 'Cette adresse ne semble pas complète (avec un @ et un point, sans accent ni espace).'; return; }
+    try { localStorage.setItem('vr-email', v); } catch (x) {}
+    location.href = 'espace/#inscription';
+  });
+});
+</script>
 </body></html>
