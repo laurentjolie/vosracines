@@ -103,6 +103,16 @@ export function creerArbre(racineEl, data, opt = {}) {
   }
 
   // ---------- disposition ----------
+  // 17/11/2026 (Laurent : « s'il n'y a qu'un seul ancêtre dans une direction il faut afficher plus un ») : le bouton annonce
+  // le nombre de générations réellement disponibles au-dessus (au plus PLUS), au lieu de PLUS en dur.
+  const hauteurs = {};
+  function hauteur(id, vu = new Set()) {
+    if (id in hauteurs) return hauteurs[id];
+    if (vu.has(id)) return 0; vu.add(id);
+    const f = parents[id]; let h = 0;
+    if (f) for (const z of [f.h, f.w]) if (z && P[z]) h = Math.max(h, 1 + hauteur(z, vu));
+    return (hauteurs[id] = h);
+  }
   function construire() {
     const w = W(), h = H(); let curseur = 0; const noeuds = [], liens = [], plusBtns = [];
     function place(id, g, lim) {
@@ -166,7 +176,7 @@ export function creerArbre(racineEl, data, opt = {}) {
       const m = n.f && n.f.mar;
       if (ps.length === 2) html += `<span class="anneau" data-lien="${esc(n.id)}" title="Touchez pour savoir pourquoi ce lien" style="left:${(ps[0].cx + ps[1].cx) / 2}px;top:${mid}px">∞${m && m.d ? ' ' + esc(an(m)) : ''}</span>`;
     }
-    for (const n of L.plusBtns) html += `<button class="plus" data-plus="${esc(n.id)}" style="left:${n.cx - 75}px;top:${n.y - 52}px">+ ${PLUS} générations</button>`;
+    for (const n of L.plusBtns) { const k = Math.min(PLUS, hauteur(n.id)) || 1; html += `<button class="plus" data-plus="${esc(n.id)}" style="left:${n.cx - 75}px;top:${n.y - 52}px">+ ${k} génération${k > 1 ? 's' : ''}</button>`; }
     if (L.desc.length) {
       const foc = positions[focus];
       html += `<span class="titre-enfants" style="left:${foc.cx}px;top:${foc.y + h + 20}px">${L.desc.length === 1 ? 'Parmi ses enfants' : 'Ses enfants'}</span>`;
