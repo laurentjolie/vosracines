@@ -602,3 +602,11 @@ dialog.sv-apercu::backdrop{background:rgba(30,20,10,.55)}
 
 /* 17/11/2026 parcours gratuit : choix « pour qui » */
 .choix{border:0;padding:0;margin:14px 0 6px}.choix label{display:flex;gap:10px;align-items:center;margin:8px 0;font-size:1rem}.choix input{width:auto;min-height:0}
+
+/* 18/11/2026 : visites du site dans l'admin */
+.visites{margin:0 0 18px}
+.adm-visites{width:100%;max-width:560px;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.adm-visites th,.adm-visites td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--line, rgba(0,0,0,.1))}
+.adm-visites th:first-child,.adm-visites td:first-child{text-align:left}
+.adm-visites thead th{font-weight:600;color:var(--ink-soft)}
+.adm-visites tfoot th{font-weight:600}

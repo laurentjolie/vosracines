@@ -121,6 +121,8 @@ async function sourceFirebase() {
         .forEach(d => { const x = JSON.parse(d.data().d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); });
       return {...out, titre: m.titre, sous_titre: m.sous_titre, expire: m.expire && m.expire.toDate(), racine: '@1'};
     },
+    // 18/11/2026 : visites du site (mesure d'audience de la page d'accueil), lecture admin
+    visites: async depuis => (await fb.getDocs(fb.query(fb.collection(db, 'visites'), fb.where('cree', '>=', depuis)))).docs.map(d => { const x = d.data(); return {id: d.id, src: x.src || '', ref: x.ref || '', cree: x.cree && x.cree.toDate ? x.cree.toDate().toISOString() : ''}; }),
     suivis: async () => (await fb.getDocs(fb.collection(db, 'suivi'))).docs.filter(d => !d.id.startsWith('_')).map(d => ({...JSON.parse(d.data().d), maj: d.data().maj || ''})),
     travail: async () => { const d = await fb.getDoc(fb.doc(db, 'suivi', '_travail')); return d.exists() ? {...JSON.parse(d.data().d), maj: d.data().maj || ''} : null; },
     // 09/11 : une pièce jointe de mail (pj/{id}, morceaux base64) rendue en Blob
@@ -492,6 +494,24 @@ const cleEmail = e => {
   if (d === 'gmail.com') l = l.split('+')[0].replace(/\./g, '');
   return l + '@' + d;
 };
+// 18/11/2026 (conseil de Paul après 500 flyers) : chaque jour, visiteurs uniques de la page d'accueil, adresses récupérées
+// (inscriptions gratuites reçues, comptes.inscription.demande) et taux de transformation = adresses / visiteurs.
+function dessinerVisites(el, visites, comptes) {
+  const jp = d => new Intl.DateTimeFormat('fr-CA', {timeZone: 'Europe/Paris'}).format(d);
+  const V = {}, A = {}, F = {}, src = {};
+  for (const v of visites) { const j = String(v.id).slice(0, 10); V[j] = (V[j] || 0) + 1; if (/flyer|bal|qr|papier/.test(v.src)) F[j] = (F[j] || 0) + 1; src[v.src || 'direct'] = (src[v.src || 'direct'] || 0) + 1; }
+  for (const c of comptes) { const d = c.inscription && c.inscription.demande; if (d) { const j = String(d).slice(0, 10); A[j] = (A[j] || 0) + 1; } }
+  const jours = []; for (let i = 0; i < 14; i++) jours.push(jp(new Date(Date.now() - i * 864e5)));
+  const tot = k => jours.reduce((n, j) => n + (k[j] || 0), 0);
+  const taux = (a, v) => v ? (100 * a / v).toLocaleString('fr-FR', {maximumFractionDigits: 1}) + ' %' : '';
+  const lib = j => new Date(j + 'T12:00:00').toLocaleDateString('fr-FR', {weekday: 'short', day: 'numeric', month: 'short'});
+  const sources = Object.entries(src).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([s, n]) => `${esc(s)} ${n}`).join(' · ');
+  el.innerHTML = `<h2 class="sv-h2">Visites du site</h2>
+    <p class="petit">Visiteurs uniques par jour sur la page d'accueil (mesure en place depuis le 18/11 au soir), adresses reçues par l'inscription gratuite, taux = adresses ÷ visiteurs.${sources ? ' Sources sur 30 jours : ' + sources + '.' : ''}</p>
+    <table class="adm-visites"><thead><tr><th>Jour</th><th>Visiteurs</th><th>dont flyer</th><th>Adresses</th><th>Taux</th></tr></thead><tbody>
+    ${jours.map(j => `<tr><td>${esc(lib(j))}</td><td>${V[j] || 0}</td><td>${F[j] || 0}</td><td>${A[j] || 0}</td><td>${taux(A[j] || 0, V[j] || 0)}</td></tr>`).join('')}
+    </tbody><tfoot><tr><th>14 jours</th><th>${tot(V)}</th><th>${tot(F)}</th><th>${tot(A)}</th><th>${taux(tot(A), tot(V))}</th></tr></tfoot></table>`;
+}
 // 16/11/2026 (Laurent) : en haut de l'admin, les indicateurs dans le temps (cumul jour par jour).
 // Inscriptions = commandes reçues (codes promo compris) ; clients = commandes payées avec un montant ; livres finis = bons à tirer validés ;
 // chiffre d'affaires = montants payés (Stripe, en centimes dans commande.json). Une petite courbe par indicateur, pas d'axe double.
@@ -559,7 +579,7 @@ async function pageAdmin(onglet) {
   if (onglet === 'arbres') onglet = 'clients';
   marquer({p: 'admin', o: onglet});
   document.title = 'Administration · Vos Racines';
-  const [arbres, comptes, suivis, travail] = await Promise.all([S.tousArbres(), S.comptes(), S.suivis ? S.suivis().catch(() => []) : [], S.travail ? S.travail().catch(() => null) : null]);
+  const [arbres, comptes, suivis, travail, visites] = await Promise.all([S.tousArbres(), S.comptes(), S.suivis ? S.suivis().catch(() => []) : [], S.travail ? S.travail().catch(() => null) : null, S.visites ? S.visites(new Date(Date.now() - 31 * 864e5)).catch(e => { console.warn(e); return []; }) : []]);
   // 02/11/2026 (D1) : étape du livre et validation du bon à tirer, visibles dans l'onglet Clients
   await Promise.all(arbres.filter(a => a.livre && a.livre.etape === 'bat').map(async a => { a.validation = await S.validation(a.id).catch(() => null); }));
   // un client = toutes ses adresses (comptes de l'espace, adresses des commandes), regroupées par boîte réelle
@@ -615,6 +635,7 @@ async function pageAdmin(onglet) {
     <section>${onglet === 'archiviste' ? `<h1>Archiviste</h1><div id="suivi"></div>` : `<h1>Clients</h1>
       ${blocTravail(travail)}
       <div class="kpis" id="kpis"></div>
+      <div class="visites" id="visites"></div>
       <div class="outils"><label class="cache-visuel" for="filtre">Rechercher</label><input id="filtre" type="search" placeholder="Nom, adresse, titre…"></div>
       <ul class="adm-clients">${clients.map(ligneClient).join('')}</ul>
       ${orphelins.length ? `<h2 class="sv-h2">Arbres sans client</h2><ul class="adm-clients">${orphelins.map(a => ligne(a.titre, court(a), a, a.validation, actionsArbre(a, true), (a.titre + ' ' + (a.sous_titre || '')).toLowerCase())).join('')}</ul>` : ''}
@@ -624,6 +645,7 @@ async function pageAdmin(onglet) {
         <div class="rangee"><button class="btn btn-1" type="submit">Enregistrer</button><label><input type="checkbox" id="fc-lien"> envoyer aussi un lien d’accès</label><span class="note-ok" id="fc-ok" role="status"></span></div></form>`}</section></div></main>`;
   brancherBarre();
   const kp = $app.querySelector('#kpis'); if (kp) try { dessinerKpis(kp, suivis, arbres); } catch (e) { console.warn(e); }
+  const vi = $app.querySelector('#visites'); if (vi) try { dessinerVisites(vi, visites, comptes); } catch (e) { console.warn(e); }
   $app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => pageAdmin(b.dataset.t));
   // un seul menu « ⋯ » ouvert à la fois ; il se referme après une action ou un clic ailleurs
   const menus = [...$app.querySelectorAll('.adm-menu')];
@@ -670,6 +692,7 @@ async function pageAdmin(onglet) {
   let premier = true;
   S.onUtilisateur(u => {
     U = u;
+    if (u && u.admin) ecrire('vr-admin', '1');   // 18/11/2026 : les visites de l'administrateur ne sont pas comptées
     if (!u) { if (!S.estLien()) (location.hash === '#inscription' ? ecranInscription() : ecranConnexion()); return; }
     if (premier || !arbreActif) { premier = false; accueil(); }
   });

@@ -556,4 +556,30 @@ document.querySelectorAll('.contact-rapide').forEach(function (f) {
   });
 });
 </script>
+<script>
+// 18/11/2026 (500 flyers de Paul) : mesure d'audience maison, sans cookie tiers ni adresse IP. Un identifiant tiré au hasard,
+// gardé dans ce navigateur, sert seulement à compter une fois par jour chaque visiteur ; la source vient de ?f= (flyer, QR code).
+(function () {
+  try {
+    if (navigator.webdriver || /bot|crawl|spider|slurp|preview|headless|lighthouse/i.test(navigator.userAgent)) return;
+    var ls = null; try { ls = window.localStorage; ls.getItem('x'); } catch (e) { ls = null; }
+    if (ls && ls.getItem('vr-admin')) return;
+    var jour = new Intl.DateTimeFormat('fr-CA', {timeZone: 'Europe/Paris'}).format(new Date());
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(jour) || (ls && ls.getItem('vr-vj') === jour)) return;
+    var id = ls && ls.getItem('vr-v');
+    if (!id || !/^[a-z0-9]{12}$/.test(id)) { id = ''; var a = 'abcdefghijklmnopqrstuvwxyz0123456789', r = new Uint8Array(12); crypto.getRandomValues(r); for (var i = 0; i < 12; i++) id += a[r[i] % 36]; if (ls) ls.setItem('vr-v', id); }
+    var q = new URLSearchParams(location.search), ref = '';
+    try { ref = document.referrer ? new URL(document.referrer).hostname : ''; } catch (e) {}
+    if (/(^|\.)vosracines\.fr$/.test(ref)) ref = '';
+    var src = (q.get('f') || q.get('utm_source') || ref || 'direct').toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 40) || 'direct';
+    if (q.has('f')) { q.delete('f'); try { history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); } catch (e) {} }
+    var P = 'projects/vosracines-espace/databases/(default)/documents';
+    fetch('https://firestore.googleapis.com/v1/' + P + ':commit?key=AIzaSyANND96hxSla4dMzwOW2yVeUnH_nws6AaU', {
+      method: 'POST', keepalive: true, headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({writes: [{update: {name: P + '/visites/' + jour + '_' + id, fields: {src: {stringValue: src}, ref: {stringValue: ref.slice(0, 80)}, page: {stringValue: location.pathname.slice(0, 60)}}},
+        currentDocument: {exists: false}, updateTransforms: [{fieldPath: 'cree', setToServerValue: 'REQUEST_TIME'}]}]})
+    }).then(function (r) { if ((r.ok || r.status === 409 || r.status === 400) && ls) ls.setItem('vr-vj', jour); }).catch(function () {});
+  } catch (e) {}
+})();
+</script>
 </body></html>
