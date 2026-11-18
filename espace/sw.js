@@ -1,5 +1,5 @@
 // Service worker de l'espace Vos Racines : réseau d'abord, cache en secours (rend l'espace installable).
-const CACHE = 'vr-espace-v11';
+const CACHE = 'vr-espace-v12';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())

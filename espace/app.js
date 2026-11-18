@@ -12,7 +12,8 @@ const params = new URLSearchParams(location.search);
 const DEV = params.get('dev');   // ?dev=client ou ?dev=admin : données locales (./dev/arbres), sans Firebase
 const LOGO = `<a class="logo" href="./"><img src="../img/sceau-simple.svg" alt=""><span>Vos Racines</span></a>`;
 const INSTALLEE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+// 18/11/2026 : le service worker est revérifié à chaque ouverture (icônes de notification, nouvelles versions)
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(r => r.update()).catch(() => {});
 const lire = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const ecrire = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
 
