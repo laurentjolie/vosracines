@@ -347,6 +347,7 @@ function barre(titre = '', selecteur = '') {
     <div class="menu-compte"><button aria-expanded="false" aria-haspopup="true">${prenom ? 'Bonjour ' + esc(prenom) : 'Mon compte'} ▾</button>
     <ul hidden>
       <li><button data-m="livres">${U.admin ? 'Tous les arbres' : 'Vos livres'}</button></li>
+${U.admin ? `<li><button data-m="notif">${'Notification' in window && Notification.permission === 'granted' ? 'Notifications : actives' : 'Activer les notifications'}</button></li>` : ''}
       <li><a href="mailto:${CONTACT}">Nous écrire</a></li>
       <li><button data-m="sortir">Se déconnecter de cet appareil</button></li>
       <li class="info">Connecté avec ${esc(U.email)}</li>
@@ -361,6 +362,7 @@ function brancherBarre() {
     const a = x.dataset.m;
     if (a === 'sortir') { await S.sortir(); ecrire('vr-email', null); ecranConnexion(); }
     if (a === 'livres') { arbreActif = null; accueil(); }
+    if (a === 'notif') activerNotifications(x);   // 18/11/2026 (Laurent : dans le menu, plus discret)
     if (a === 'revenir') { vuComme = null; arbreActif = null; accueil(); }
   });
   document.addEventListener('click', e => { if (!m.contains(e.target)) { ul.hidden = true; b.setAttribute('aria-expanded', 'false'); } }, {once: true});
@@ -549,7 +551,7 @@ async function activerNotifications(b) {
     const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: cle});
     const j = sub.toJSON(), h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(j.endpoint));
     await S.abonnerPush([...new Uint8Array(h)].slice(0, 12).map(x => x.toString(16).padStart(2, '0')).join(''), j);
-    dire('🔔 Notifications actives sur cet appareil');
+    dire('Notifications : actives sur cet appareil');
   } catch (e) { console.warn(e); dire('Échec : ' + (e.message || e)); }
 }
 async function pageAdmin(onglet) {
@@ -608,7 +610,7 @@ async function pageAdmin(onglet) {
     return ligne(c.nom || c.emails[0], (as.length ? as.map(x => pourDe(x) + court(x)).join(' · ') : court(a)) + (passesCourt ? ' · ' + passesCourt : ''), a, a && a.validation, menuP,
       (c.nom + ' ' + c.emails.join(' ') + ' ' + c.arbres.map(titre).join(' ')).toLowerCase(), ferme); };
   $app.innerHTML = barre() + `<main class="page large"><div class="admin">
-    <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button><button data-notif class="petit">${'Notification' in window && Notification.permission === 'granted' ? '🔔 Notifications actives' : '🔔 Activer les notifications'}</button></nav>
+    <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button></nav>
     <section>${onglet === 'archiviste' ? `<h1>Archiviste</h1><div id="suivi"></div>` : `<h1>Clients</h1>
       ${blocTravail(travail)}
       <div class="kpis" id="kpis"></div>
@@ -622,7 +624,6 @@ async function pageAdmin(onglet) {
   brancherBarre();
   const kp = $app.querySelector('#kpis'); if (kp) try { dessinerKpis(kp, suivis, arbres); } catch (e) { console.warn(e); }
   $app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => pageAdmin(b.dataset.t));
-  const bn = $app.querySelector('[data-notif]'); if (bn) bn.onclick = () => activerNotifications(bn);
   // un seul menu « ⋯ » ouvert à la fois ; il se referme après une action ou un clic ailleurs
   const menus = [...$app.querySelectorAll('.adm-menu')];
   menus.forEach(d => { d.addEventListener('toggle', () => { if (d.open) { menus.forEach(x => { if (x !== d) x.open = false; }); d.classList.remove('haut'); const r = d.querySelector('.adm-pop').getBoundingClientRect(); if (r.bottom > innerHeight - 8 && r.top - 52 > innerHeight - r.top) d.classList.add('haut'); } });
