@@ -9,3 +9,5 @@ export const FIREBASE = {
 // Développement : émulateurs locaux (firebase emulators:start) quand la page est servie depuis localhost.
 export const EMULATEURS = ['localhost', '127.0.0.1'].includes(location.hostname) && !new URLSearchParams(location.search).has('dev');
 export const CONTACT = 'contact@vosracines.fr';
+// 18/11/2026 : clé publique VAPID des notifications de l'application (la clé privée reste sur HQ : notifier.py).
+export const VAPID = 'BCeXEN2llPn1sMGFxwtF7uRPqJCFCOGJAvz_tB5vUVn40XqL_HKKdOvewurl5qdxxlfcjFZT5DvZCbGWeRks6WM';

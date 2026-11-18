@@ -1,6 +1,6 @@
 // Vos Racines : espace client (29/10/2026). Connexion par lien d'accès reçu par e-mail (Firebase Auth, lien généré sur HQ
 // et envoyé par l'archiviste), arbres en lecture selon le compte, menu administrateur.
-import {FIREBASE, EMULATEURS, CONTACT} from './config.js';
+import {FIREBASE, EMULATEURS, CONTACT, VAPID} from './config.js';
 import {creerArbre, nomComplet} from './arbre.js';
 import {ouvrirRelecture, telechargerPdf, etatLivre} from './relecture.js';
 import {ouvrirOrientation} from './orientation.js';
@@ -72,6 +72,7 @@ async function sourceFirebase() {
     ouvrirRelecture: (id, oui) => fb.updateDoc(fb.doc(db, 'arbres', id), {relecture: !!oui}),
     // 02/11/2026 (D1) : validation du bon à tirer par le client, puis PDF téléchargeable (morceaux base64 publiés depuis HQ)
     validation: async id => { const d = await fb.getDoc(fb.doc(db, 'arbres', id, 'validation', 'bat')); if (!d.exists()) return null; const x = d.data(); return {...x, quand: x.quand && x.quand.toDate ? x.quand.toDate().toISOString() : x.quand}; },
+    abonnerPush: (id, sub) => fb.setDoc(fb.doc(db, 'push', id), {sub: JSON.stringify(sub), par: U.email, ua: navigator.userAgent.slice(0, 160), cree: fb.serverTimestamp()}),   // 18/11/2026
     valider: (id, version) => fb.setDoc(fb.doc(db, 'arbres', id, 'validation', 'bat'), {par: U.email, quand: fb.serverTimestamp(), version}),
     // 10/11/2026 (Laurent : une seule réouverture sans son accord) : on note la réouverture, puis on retire la validation
     reouvert: async id => (await fb.getDoc(fb.doc(db, 'arbres', id, 'validation', 'reouverture'))).exists(),
@@ -536,6 +537,21 @@ function blocTravail(t) {
     <div><h2>Ensuite</h2>${suite ? `<ol>${suite}</ol>` : '<p class="petit">Rien en attente.</p>'}${(t.sommeil || []).length ? `<p class="petit">En sommeil, en attente de faits nouveaux : ${t.sommeil.map(e => esc(e.arbre || e.qui)).join(', ')}</p>` : ''}</div>
     <p class="petit maj-travail">Mis à jour à ${esc(h(t.maj))}</p></section>`;
 }
+// 18/11/2026 (Laurent : notifications dans l'appli Vos Racines) : abonnement Web Push de cet appareil, gardé dans Firestore
+// (collection « push », administrateur seul) ; HQ envoie avec notifier.py. Sur iPhone, l'application doit être installée.
+async function activerNotifications(b) {
+  const dire = t => { b.textContent = t; };
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return dire('Notifications impossibles ici (sur iPhone : installer l’application d’abord)');
+    if (await Notification.requestPermission() !== 'granted') return dire('Notifications refusées dans le navigateur');
+    const reg = await navigator.serviceWorker.ready;
+    const cle = Uint8Array.from(atob(VAPID.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: cle});
+    const j = sub.toJSON(), h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(j.endpoint));
+    await S.abonnerPush([...new Uint8Array(h)].slice(0, 12).map(x => x.toString(16).padStart(2, '0')).join(''), j);
+    dire('🔔 Notifications actives sur cet appareil');
+  } catch (e) { console.warn(e); dire('Échec : ' + (e.message || e)); }
+}
 async function pageAdmin(onglet) {
   if (onglet === 'arbres') onglet = 'clients';
   marquer({p: 'admin', o: onglet});
@@ -592,7 +608,7 @@ async function pageAdmin(onglet) {
     return ligne(c.nom || c.emails[0], (as.length ? as.map(x => pourDe(x) + court(x)).join(' · ') : court(a)) + (passesCourt ? ' · ' + passesCourt : ''), a, a && a.validation, menuP,
       (c.nom + ' ' + c.emails.join(' ') + ' ' + c.arbres.map(titre).join(' ')).toLowerCase(), ferme); };
   $app.innerHTML = barre() + `<main class="page large"><div class="admin">
-    <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button></nav>
+    <nav class="rail" aria-label="Administration"><button data-t="clients" aria-current="${onglet === 'clients'}">Clients</button><button data-t="archiviste" aria-current="${onglet === 'archiviste'}">Archiviste</button><button data-notif class="petit">${'Notification' in window && Notification.permission === 'granted' ? '🔔 Notifications actives' : '🔔 Activer les notifications'}</button></nav>
     <section>${onglet === 'archiviste' ? `<h1>Archiviste</h1><div id="suivi"></div>` : `<h1>Clients</h1>
       ${blocTravail(travail)}
       <div class="kpis" id="kpis"></div>
@@ -606,6 +622,7 @@ async function pageAdmin(onglet) {
   brancherBarre();
   const kp = $app.querySelector('#kpis'); if (kp) try { dessinerKpis(kp, suivis, arbres); } catch (e) { console.warn(e); }
   $app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => pageAdmin(b.dataset.t));
+  const bn = $app.querySelector('[data-notif]'); if (bn) bn.onclick = () => activerNotifications(bn);
   // un seul menu « ⋯ » ouvert à la fois ; il se referme après une action ou un clic ailleurs
   const menus = [...$app.querySelectorAll('.adm-menu')];
   menus.forEach(d => { d.addEventListener('toggle', () => { if (d.open) { menus.forEach(x => { if (x !== d) x.open = false; }); d.classList.remove('haut'); const r = d.querySelector('.adm-pop').getBoundingClientRect(); if (r.bottom > innerHeight - 8 && r.top - 52 > innerHeight - r.top) d.classList.add('haut'); } });
