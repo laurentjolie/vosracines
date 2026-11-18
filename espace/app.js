@@ -536,7 +536,7 @@ function blocTravail(t) {
     : e.quoi === 'livre' ? `<li><b>Livre : ${esc(e.livre)}</b> <span class="petit">(nouvelle version)</span></li>` : `<li><b>${esc(e.qui)}</b></li>`;
   const suite = (t.file || []).slice(0, 4).map(e => `<li>${esc(e.arbre || e.qui)}${e.arbre && e.qui && !e.arbre.includes(e.qui) ? ` <span class="petit">(${esc(e.qui)})</span>` : ''}${e.reprise ? ` <span class="petit">· vers ${esc(e.reprise)}</span>` : ''}</li>`).join('');
   return `<section class="travail"><div><h2>En ce moment</h2>${(t.en_cours || []).length ? `<ul>${t.en_cours.map(ligne).join('')}</ul>` : '<p class="petit">L’archiviste ne cherche rien en ce moment.</p>'}</div>
-    <div><h2>Ensuite</h2>${suite ? `<ol>${suite}</ol>` : '<p class="petit">Rien en attente.</p>'}${(t.sommeil || []).length ? `<p class="petit">En sommeil, en attente de faits nouveaux : ${t.sommeil.map(e => esc(e.arbre || e.qui)).join(', ')}</p>` : ''}</div>
+    <div><h2>Ensuite</h2>${suite ? `<ol>${suite}</ol>` : '<p class="petit">Rien en attente.</p>'}${(t.sommeil || []).length ? `<p class="petit">En sommeil, en attente de faits nouveaux : ${t.sommeil.map(e => esc(e.arbre || e.qui)).join(', ')}</p>` : ''}${(t.plafond || []).length ? `<p class="petit">Plafond de passes atteint pour cette version : ${t.plafond.map(e => esc(e.arbre || e.qui)).join(', ')}</p>` : ''}</div>
     <p class="petit maj-travail">Mis à jour à ${esc(h(t.maj))}</p></section>`;
 }
 // 18/11/2026 (Laurent : notifications dans l'appli Vos Racines) : abonnement Web Push de cet appareil, gardé dans Firestore
