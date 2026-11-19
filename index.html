@@ -1,4 +1,21 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+/* 19/11/2026 (Laurent : « ne pas présenter que deux pages ») : le livre d'exemple entier, page par page */
+.lv{margin-top:26px}
+.lv-titre{font:600 15px var(--f-ui);color:var(--ink-soft);margin:0 0 12px}
+.lv-scene{display:flex;align-items:center;gap:10px}
+.lv-pages{flex:1;display:flex;justify-content:center;gap:0;min-width:0}
+.lv-pages img{display:block;width:50%;max-width:420px;height:auto;aspect-ratio:700/992;background:#fff;border:1px solid var(--line);box-shadow:0 18px 40px -26px rgba(42,35,29,.55);cursor:zoom-in}
+.lv-pages img[hidden]{display:none}
+.lv-pages.seule img{width:50%}
+.lv-nav{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:rgba(46,33,23,.78);color:#FBF6EC;font:600 26px/1 var(--f-ui);cursor:pointer}
+.lv-nav:disabled{opacity:.25;cursor:default}
+.lv-barre{display:flex;align-items:center;gap:14px;margin:14px auto 0;max-width:640px}
+.lv-barre input{flex:1;accent-color:#9A4A36}
+.lv-num{font:500 14px var(--f-ui);color:var(--ink-soft);min-width:150px;text-align:right}
+.lv-aller{font:14.5px var(--f-ui);color:var(--ink-soft);margin:12px 0 0;text-align:center}
+.lv-aller a{color:inherit}
+@media (max-width:720px){.lv-pages img,.lv-pages.seule img{width:100%;max-width:none}.lv-pages .lv-d{display:none}.lv-nav{width:40px;height:40px}.lv-num{min-width:0}}
+</style>
 <title>Vos Racines, le livre de votre famille</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -353,30 +370,16 @@ dialog.loupe button{display:inline-block;margin:0;min-height:48px;padding:0 22px
       <h2>Chaque lignée a son chapitre.</h2>
       <p class="lede" style="margin-top:16px">Quatre grands-parents, ce sont quatre familles, souvent quatre régions. Le livre donne à chacune son arbre généalogique, son histoire, ses actes et ses villages, et les fait se rejoindre jusqu'à la personne qui le reçoit.</p>
 
-      <div class="tour">
-        <div class="tabs" role="tablist" aria-label="Feuilleter le livre">
-          <button class="tab" role="tab" id="t1" aria-controls="p1" aria-selected="true">L'arbre généalogique et le récit</button>
-          <button class="tab" role="tab" id="t2" aria-controls="p2" aria-selected="false" tabindex="-1">Les actes</button>
-          <button class="tab" role="tab" id="t3" aria-controls="p3" aria-selected="false" tabindex="-1">Les lieux</button>
-          <button class="tab" role="tab" id="t4" aria-controls="p4" aria-selected="false" tabindex="-1">Les records</button>
+      <div class="lv" id="livre-entier" data-n="124">
+        <p class="lv-titre">Feuilletez un livre entier, de la couverture à la dernière page (124 pages)</p>
+        <div class="lv-scene">
+          <button type="button" class="lv-nav g" aria-label="Pages précédentes">&#8249;</button>
+          <div class="lv-pages"><img class="lv-g" alt="" width="700" height="992"><img class="lv-d" alt="" width="700" height="992"></div>
+          <button type="button" class="lv-nav d" aria-label="Pages suivantes">&#8250;</button>
         </div>
-        <div class="panel" role="tabpanel" id="p1" aria-labelledby="t1">
-          <img src="img/arbre-recit.jpg" alt="Double page : l'arbre généalogique du chapitre « Venus de Suisse » et le récit de la lignée" width="1400" height="494" loading="lazy">
-          <div><h3>L'arbre généalogique, puis le récit</h3><p>À gauche, la lignée de couple en couple. À droite, qui ils étaient, où ils vivaient, ce qui leur est arrivé, avec un repère dans l'histoire de France.</p><p>Ce que les actes prouvent est raconté ; ce qui ne l'est pas encore, le livre le dit.</p></div>
-        </div>
-        <div class="panel" role="tabpanel" id="p2" aria-labelledby="t2" hidden>
-          <img src="img/actes.jpg" alt="Double page : un acte de baptême de 1687 en latin et un acte de mariage de 1742, avec leur transcription" width="1400" height="494" loading="lazy">
-          <div><h3>Les actes, tels qu'on les lit</h3><p>Les actes photographiés dans les registres. Le passage qui compte est encadré, recopié avec l'orthographe du curé et traduit quand il est en latin.</p></div>
-        </div>
-        <div class="panel" role="tabpanel" id="p3" aria-labelledby="t3" hidden>
-          <img src="img/lieux.jpg" alt="La carte ancienne des villages de la famille avec un extrait de carte du XVIIIe siècle, et une page « Les lieux » montrant Lunéville sur la carte d'état-major" width="1400" height="493" loading="lazy">
-          <div><h3>Les villages, sur les cartes de l'époque</h3><p>La carte des villages de la famille, où chaque cercle grandit avec le nombre d'actes ; puis chaque lignée sur une carte ancienne, Cassini sous Louis XV ou état-major au XIX<sup>e</sup> siècle, avec ses villages cerclés à l'encre.</p></div>
-        </div>
-        <div class="panel" role="tabpanel" id="p4" aria-labelledby="t4" hidden>
-          <img src="img/records.jpg" alt="Double page : les records de la famille et le calendrier des mariages" width="1400" height="494" loading="lazy">
-          <div><h3>Les records de la famille</h3><p>Le doyen et la doyenne, la plus grande fratrie, les plus jeunes mariés, le plus long mariage, et le calendrier des noces d'autrefois.</p></div>
-        </div>
-        <p class="src">Pages d'un livre réalisé en octobre 2026. Les noms des personnes ont été changés, y compris dans les transcriptions.</p>
+        <div class="lv-barre"><input type="range" min="1" max="124" value="1" aria-label="Aller à la page"><span class="lv-num" aria-live="polite">Couverture</span></div>
+        <p class="lv-aller">Aller à : <a href="#livre-entier" data-p="2">les quatre lignées</a> · <a href="#livre-entier" data-p="4">un chapitre et son arbre généalogique</a> · <a href="#livre-entier" data-p="29">un acte recopié mot pour mot</a> · <a href="#livre-entier" data-p="30">une carte ancienne</a> · <a href="#livre-entier" data-p="104">les records de la famille</a> · <a href="#livre-entier" data-p="119">les armes de la famille</a></p>
+        <p class="src">Un livre réalisé en novembre 2026, montré en entier. Les noms et prénoms des personnes ont été changés, y compris dans les transcriptions ; les photographies de famille sont retirées et les noms floutés sur les actes récents.</p>
       </div>
     </div>
   </section>
@@ -580,6 +583,38 @@ document.querySelectorAll('.contact-rapide').forEach(function (f) {
         currentDocument: {exists: false}, updateTransforms: [{fieldPath: 'cree', setToServerValue: 'REQUEST_TIME'}]}]})
     }).then(function (r) { if ((r.ok || r.status === 409 || r.status === 400) && ls) ls.setItem('vr-vj', jour); }).catch(function () {});
   } catch (e) {}
+})();
+</script>
+<script>
+// 19/11/2026 : visionneuse du livre d'exemple entier (images img/exemple/001.jpg ... 124.jpg) ; double page sur ordinateur, une page sur téléphone
+(function(){
+  var lv=document.getElementById('livre-entier'); if(!lv) return;
+  var N=+lv.getAttribute('data-n'), g=lv.querySelector('.lv-g'), d=lv.querySelector('.lv-d'), pages=lv.querySelector('.lv-pages');
+  var pr=lv.querySelector('.lv-nav.g'), nx=lv.querySelector('.lv-nav.d'), rg=lv.querySelector('input'), num=lv.querySelector('.lv-num');
+  var mq=matchMedia('(max-width:720px)'), p=1, cache={};
+  function src(n){ return 'img/exemple/'+('00'+n).slice(-3)+'.jpg'; }
+  function pre(n){ if(n>=1&&n<=N&&!cache[n]){ cache[n]=new Image(); cache[n].src=src(n); } }
+  function gauche(n){ return (mq.matches||n===1)?n:(n%2?n-1:n); }   // couverture seule, puis pages paires à gauche
+  function montrer(n){
+    n=Math.max(1,Math.min(N,n)); p=gauche(n);
+    var simple=mq.matches||p===1||p===N;
+    g.src=src(p); g.alt='Page '+p+' du livre d\u2019exemple';
+    if(simple){ d.hidden=true; pages.classList.add('seule'); } else { d.hidden=false; d.src=src(p+1); d.alt='Page '+(p+1)+' du livre d\u2019exemple'; pages.classList.remove('seule'); }
+    num.textContent=p===1?'Couverture':(simple?'Page '+p+' sur '+N:'Pages '+p+' et '+(p+1)+' sur '+N);
+    rg.value=p; pr.disabled=p<=1; nx.disabled=(simple?p:p+1)>=N;
+    for(var k=1;k<=4;k++){ pre(p+k); pre(p-k); }
+  }
+  function pas(s){ var simple=mq.matches||p===1; montrer(s>0?(simple?p+1:p+2):(mq.matches?p-1:(p<=3?1:p-2))); }
+  pr.addEventListener('click',function(){pas(-1);}); nx.addEventListener('click',function(){pas(1);});
+  rg.addEventListener('input',function(){montrer(+rg.value);});
+  lv.querySelectorAll('[data-p]').forEach(function(a){ a.addEventListener('click',function(e){ e.preventDefault(); montrer(+a.getAttribute('data-p')); lv.scrollIntoView({behavior:'smooth',block:'start'}); }); });
+  lv.addEventListener('keydown',function(e){ if(e.key==='ArrowRight'){pas(1);e.preventDefault();} if(e.key==='ArrowLeft'){pas(-1);e.preventDefault();} });
+  var x0=null; pages.addEventListener('touchstart',function(e){x0=e.touches[0].clientX;},{passive:true});
+  pages.addEventListener('touchend',function(e){ if(x0===null)return; var dx=e.changedTouches[0].clientX-x0; x0=null; if(Math.abs(dx)>40) pas(dx<0?1:-1); },{passive:true});
+  var lo=document.querySelector('dialog.loupe');
+  [g,d].forEach(function(im){ im.addEventListener('click',function(){ if(!lo||!lo.showModal) return; var i=lo.querySelector('img'); i.src=im.src; i.alt=im.alt; lo.showModal(); }); });
+  if(mq.addEventListener) mq.addEventListener('change',function(){montrer(p);});
+  montrer(1);
 })();
 </script>
 </body></html>
