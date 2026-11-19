@@ -496,21 +496,50 @@ const cleEmail = e => {
 };
 // 18/11/2026 (conseil de Paul après 500 flyers) : chaque jour, visiteurs uniques de la page d'accueil, adresses récupérées
 // (inscriptions gratuites reçues, comptes.inscription.demande) et taux de transformation = adresses / visiteurs.
+// 19/11/2026 (Laurent : « un graphe serait mieux qu'un tableau ») : barres groupées par jour depuis le début de la mesure, tableau replié dessous.
 function dessinerVisites(el, visites, comptes) {
   const jp = d => new Intl.DateTimeFormat('fr-CA', {timeZone: 'Europe/Paris'}).format(d);
-  const V = {}, A = {}, F = {}, src = {};
-  for (const v of visites) { const j = String(v.id).slice(0, 10); V[j] = (V[j] || 0) + 1; if (/flyer|bal|qr|papier/.test(v.src)) F[j] = (F[j] || 0) + 1; src[v.src || 'direct'] = (src[v.src || 'direct'] || 0) + 1; }
+  const DEBUT = '2026-11-18', V = {}, A = {}, F = {}, src = {};
+  const nomSrc = x => ({direct: 'accès direct', 'com.google.android.googlequicksearchbox': 'Google (appli)', 'com.google.android.gm': 'Gmail'}[x]
+    || (/(^|\.)google\./.test(x) ? 'Google' : /facebook/.test(x) ? 'Facebook' : /instagram/.test(x) ? 'Instagram' : /flyer|bal|qr|papier/.test(x) ? 'flyer' : x));
+  for (const v of visites) { const j = String(v.id).slice(0, 10); V[j] = (V[j] || 0) + 1; if (/flyer|bal|qr|papier/.test(v.src)) F[j] = (F[j] || 0) + 1; const k = nomSrc(v.src || 'direct'); src[k] = (src[k] || 0) + 1; }
   for (const c of comptes) { const d = c.inscription && c.inscription.demande; if (d) { const j = String(d).slice(0, 10); A[j] = (A[j] || 0) + 1; } }
-  const jours = []; for (let i = 0; i < 14; i++) jours.push(jp(new Date(Date.now() - i * 864e5)));
-  const tot = k => jours.reduce((n, j) => n + (k[j] || 0), 0);
-  const taux = (a, v) => v ? (100 * a / v).toLocaleString('fr-FR', {maximumFractionDigits: 1}) + ' %' : '';
-  const lib = j => new Date(j + 'T12:00:00').toLocaleDateString('fr-FR', {weekday: 'short', day: 'numeric', month: 'short'});
+  const jours = []; for (let t = Date.now(); jours.length < 30; t -= 864e5) { const j = jp(new Date(t)); if (j < DEBUT) break; jours.unshift(j); }
+  const tot = k => jours.reduce((n, j) => n + (k[j] || 0), 0), TV = tot(V), TA = tot(A);
+  const pct = (a, v) => v ? (100 * a / v).toLocaleString('fr-FR', {maximumFractionDigits: 1}) + '\u00a0%' : '';
+  const lib = (j, long) => new Date(j + 'T12:00:00').toLocaleDateString('fr-FR', long ? {weekday: 'short', day: 'numeric', month: 'short'} : {day: 'numeric', month: 'numeric'});
   const sources = Object.entries(src).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([s, n]) => `${esc(s)} ${n}`).join(' · ');
+  // graphe : une seule échelle (des personnes), visiteurs en ocre, adresses en brique, valeur écrite au-dessus de chaque barre
+  const W = Math.round(Math.max(320, Math.min(640, el.clientWidth || 640))), H = 210, G = 30, B = 26, HAUT = 18, n = jours.length, pw = W - G - 6, slot = pw / n;
+  const bw = Math.max(6, Math.min(22, slot * 0.32)), max = Math.max(4, ...jours.map(j => V[j] || 0));
+  const pas = max <= 5 ? 1 : max <= 12 ? 2 : max <= 30 ? 5 : max <= 60 ? 10 : 25, haut = Math.ceil(max / pas) * pas;
+  const Y = v => H - B - v / haut * (H - B - HAUT);
+  const barre = (x, v, cl) => { if (!v) return ''; const y = Y(v), h = H - B - y, r = Math.min(4, bw / 2, h);
+    return `<path class="${cl}" d="M${x.toFixed(1)} ${H - B} V${(y + r).toFixed(1)} Q${x.toFixed(1)} ${y.toFixed(1)} ${(x + r).toFixed(1)} ${y.toFixed(1)} H${(x + bw - r).toFixed(1)} Q${(x + bw).toFixed(1)} ${y.toFixed(1)} ${(x + bw).toFixed(1)} ${(y + r).toFixed(1)} V${H - B}Z"/>`
+      + `<text class="vs-val" x="${(x + bw / 2).toFixed(1)}" y="${(y - 5).toFixed(1)}">${v}</text>`; };
+  let grille = ''; for (let v = pas; v <= haut; v += pas) grille += `<line class="vs-grille" x1="${G}" x2="${W - 6}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text class="vs-axe" x="${G - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end">${v}</text>`;
+  const tous = n <= 10 ? 1 : Math.ceil(n / 8);
+  const groupes = jours.map((j, k) => { const x0 = G + k * slot + slot / 2 - bw - 1;
+    return `<g class="vs-jour" data-k="${k}"><rect class="vs-cible" x="${(G + k * slot).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${H}"/>${barre(x0, V[j] || 0, 'vs-v')}${barre(x0 + bw + 2, A[j] || 0, 'vs-a')}`
+      + ((n - 1 - k) % tous ? '' : `<text class="vs-axe" x="${(G + k * slot + slot / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${esc(lib(j))}</text>`) + '</g>'; }).join('');
   el.innerHTML = `<h2 class="sv-h2">Visites du site</h2>
-    <p class="petit">Visiteurs uniques par jour sur la page d'accueil (mesure en place depuis le 18/11 au soir), adresses reçues par l'inscription gratuite, taux = adresses ÷ visiteurs.${sources ? ' Sources sur 30 jours : ' + sources + '.' : ''}</p>
-    <table class="adm-visites"><thead><tr><th>Jour</th><th>Visiteurs</th><th>dont flyer</th><th>Adresses</th><th>Taux</th></tr></thead><tbody>
-    ${jours.map(j => `<tr><td>${esc(lib(j))}</td><td>${V[j] || 0}</td><td>${F[j] || 0}</td><td>${A[j] || 0}</td><td>${taux(A[j] || 0, V[j] || 0)}</td></tr>`).join('')}
-    </tbody><tfoot><tr><th>14 jours</th><th>${tot(V)}</th><th>${tot(F)}</th><th>${tot(A)}</th><th>${taux(tot(A), tot(V))}</th></tr></tfoot></table>`;
+    <p class="vs-tete"><b>${TV}</b> visiteur${TV > 1 ? 's' : ''} et <b>${TA}</b> adresse${TA > 1 ? 's' : ''} reçue${TA > 1 ? 's' : ''} depuis le 18/11${TV ? ` : taux de transformation <b>${pct(TA, TV)}</b>` : ''}</p>
+    <p class="vs-legende"><span><i class="vs-v"></i>Visiteurs uniques (page d'accueil)</span><span><i class="vs-a"></i>Adresses reçues (inscription gratuite)</span></p>
+    <div class="vs-graphe"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Visiteurs et adresses par jour depuis le 18 novembre">${grille}<line class="vs-base" x1="${G}" x2="${W - 6}" y1="${H - B}" y2="${H - B}"/>${groupes}</svg><div class="vs-bulle" hidden></div></div>
+    ${sources ? `<p class="petit">Sources des visites : ${sources}.</p>` : ''}
+    <details class="vs-detail"><summary>Voir le tableau</summary><table class="adm-visites"><thead><tr><th>Jour</th><th>Visiteurs</th><th>dont flyer</th><th>Adresses</th><th>Taux</th></tr></thead><tbody>
+    ${jours.slice().reverse().map(j => `<tr><td>${esc(lib(j, 1))}</td><td>${V[j] || 0}</td><td>${F[j] || 0}</td><td>${A[j] || 0}</td><td>${pct(A[j] || 0, V[j] || 0)}</td></tr>`).join('')}
+    </tbody></table></details>`;
+  const g = el.querySelector('.vs-graphe'), bulle = g.querySelector('.vs-bulle'), svg = g.querySelector('svg');
+  g.querySelectorAll('.vs-jour').forEach(gr => {
+    const k = +gr.dataset.k, j = jours[k];
+    const montrer = () => { g.querySelectorAll('.vs-jour').forEach(x => x.classList.toggle('actif', x === gr));
+      bulle.innerHTML = `<b>${esc(lib(j, 1))}</b><br>${V[j] || 0} visiteur${(V[j] || 0) > 1 ? 's' : ''}${F[j] ? `, dont ${F[j]} flyer` : ''}<br>${A[j] || 0} adresse${(A[j] || 0) > 1 ? 's' : ''}${V[j] ? ` · taux ${pct(A[j] || 0, V[j])}` : ''}`;
+      bulle.hidden = false; const r = svg.getBoundingClientRect(), cx = (G + (k + .5) * slot) / W * r.width;
+      bulle.style.left = Math.max(0, Math.min(r.width - bulle.offsetWidth, cx - bulle.offsetWidth / 2)) + 'px'; };
+    gr.addEventListener('pointerenter', montrer); gr.addEventListener('pointerdown', montrer);
+  });
+  g.addEventListener('pointerleave', () => { bulle.hidden = true; g.querySelectorAll('.vs-jour').forEach(x => x.classList.remove('actif')); });
 }
 // 16/11/2026 (Laurent) : en haut de l'admin, les indicateurs dans le temps (cumul jour par jour).
 // Inscriptions = commandes reçues (codes promo compris) ; clients = commandes payées avec un montant ; livres finis = bons à tirer validés ;

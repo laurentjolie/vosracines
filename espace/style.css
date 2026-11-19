@@ -610,3 +610,20 @@ dialog.sv-apercu::backdrop{background:rgba(30,20,10,.55)}
 .adm-visites th:first-child,.adm-visites td:first-child{text-align:left}
 .adm-visites thead th{font-weight:600;color:var(--ink-soft)}
 .adm-visites tfoot th{font-weight:600}
+
+/* 19/11/2026 : graphe des visites (une échelle ; visiteurs ocre, adresses brique ; valeurs écrites, tableau replié) */
+.vs-tete{margin:4px 0 6px}
+.vs-legende{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--ink-soft);margin:0 0 6px}
+.vs-legende i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+i.vs-v,path.vs-v{background:#C98A3A;fill:#C98A3A}
+i.vs-a,path.vs-a{background:#8A3A17;fill:#8A3A17}
+.vs-graphe{position:relative;max-width:720px}
+.vs-graphe svg{display:block;width:100%;height:auto;overflow:visible}
+.vs-grille{stroke:var(--line);stroke-width:1;opacity:.6}
+.vs-base{stroke:var(--line-strong);stroke-width:1}
+.vs-axe{font:12px var(--f-ui,sans-serif);fill:var(--ink-soft)}
+.vs-val{font:600 12px var(--f-ui,sans-serif);fill:var(--ink);text-anchor:middle}
+.vs-cible{fill:transparent}
+.vs-jour.actif .vs-cible{fill:rgba(140,123,104,.10)}
+.vs-bulle{position:absolute;top:calc(100% + 4px);z-index:2;background:var(--paper,#FFFCF5);border:1px solid var(--line-strong);border-radius:8px;padding:6px 10px;font-size:13px;line-height:1.4;pointer-events:none;box-shadow:0 6px 18px -10px rgba(46,33,23,.5);white-space:nowrap}
+.vs-detail{margin-top:8px}.vs-detail summary{cursor:pointer;font-size:14px;color:var(--ink-soft)}
