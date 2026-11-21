@@ -630,19 +630,34 @@ async function pageAdmin(onglet) {
   }
   const clients = [...G.values()].map(g => ({...g, emails: [...g.emails], arbres: [...g.arbres], nom: [...g.noms].sort((x, y) => y.length - x.length)[0] || ''}))
     .sort((a, b) => (b.commandes.length ? 1 : 0) - (a.commandes.length ? 1 : 0) || a.cle.localeCompare(b.cle));
+  // 21/11/2026 (Laurent) : deux clients au même prénom se distinguent par les premières lettres du nom de famille (« Stéphane M. », « Stéphane C. »)
+  const sansAcc = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const premierMot = t => String(t || '').trim().split(/[\s,]+/)[0];
+  const familleDe = c => { const f = c.commandes.map(s => s.famille).find(Boolean); if (f) return f;
+    const pr = sansAcc(premierMot(c.nom));
+    for (const e of c.emails) { const t = sansAcc(e.split('@')[0]).split(/[._+-]/).map(x => x.replace(/\d+$/, ''));
+      if (t.length < 2) continue;
+      const r = t.filter(x => x.length > 1 && x !== pr && !pr.startsWith(x)); if (r.length) return r[0][0].toUpperCase() + r[0].slice(1); }
+    return ''; };
+  const parPrenom = new Map();
+  for (const c of clients) { const p = sansAcc(premierMot(c.nom)); if (p) { if (!parPrenom.has(p)) parPrenom.set(p, []); parPrenom.get(p).push(c); } }
+  for (const L of parPrenom.values()) { if (L.length < 2) continue;
+    const F = L.map(familleDe);
+    L.forEach((c, i) => { const f = F[i]; if (!f) return; const autres = F.filter((x, j) => j !== i && x).map(sansAcc);
+      let k = 1; while (k < f.length && autres.some(x => x.startsWith(sansAcc(f.slice(0, k))))) k++;
+      c.nom = `${premierMot(c.nom)} ${f.slice(0, k)}${k < f.length ? '.' : ''}`; }); }
   const avecClient = new Set(clients.flatMap(c => c.arbres));
   const orphelins = arbres.filter(a => !avecClient.has(a.id));
   const titre = id => (arbres.find(a => a.id === id) || {}).titre || id;
-  // 16/11/2026 (Laurent) : une ligne par fiche ; le détail et les actions passent dans le menu « ⋯ »
+  // 16/11/2026 (Laurent) : une ligne par fiche ; le détail et les actions passent dans le menu « ⋯ » (21/11 : « Ouvrir » aussi)
   const court = a => { if (!a) return 'aucun arbre'; const L = a.livre || {}, v = L.version ? ' ' + L.version : '';
     if (L.etape === 'bat') return a.validation ? `BAT${v} validé` : `BAT${v} à valider`;
     if (L.etape === 'premier_jet') return `premier jet${v}`;
     return `${a.n_ancetres || 0} ancêtres`; };
   const actionsArbre = (a, seul) => `<div class="adm-info"><b>${esc(a.titre)}</b> ${esc(a.sous_titre || '')} · ${a.n_ancetres || 0} ancêtres${a.maj ? ' · ' + esc(new Date(a.maj).toLocaleDateString('fr-FR')) : ''}${a.livre ? `<br>Livre : ${esc(etatLivre(a))}` : ''}</div>
-    ${seul ? '' : `<button data-o="${esc(a.id)}" data-v="admin">Ouvrir</button>`}<button data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.proposition ? `<button data-or="${esc(a.id)}">Orientation${a.orientation ? ' (ouverte)' : ''}</button>` : ''}${a.livre ? `<button data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}`;
+    <button data-o="${esc(a.id)}" data-v="admin">Ouvrir</button><button data-o="${esc(a.id)}" data-v="client">Vue client</button>${a.proposition ? `<button data-or="${esc(a.id)}">Orientation${a.orientation ? ' (ouverte)' : ''}</button>` : ''}${a.livre ? `<button data-rl="${esc(a.id)}">Relecture${a.relecture ? ' (ouverte)' : ''}</button>` : ''}`;
   const ligne = (nom, sousTitre, a, valide, menu, f, ferme) => `<li class="adm-client" data-f="${esc(f)}"><div class="adm-ligne">
       <span class="adm-nom"><b>${esc(nom)}</b> <span class="petit${valide ? ' valide' : ''}">${esc(sousTitre)}</span>${ferme ? ' <span class="petit"><i>(pas ouvert)</i></span>' : ''}</span>
-      ${a ? `<button class="btn btn-1 adm-ouvrir" data-o="${esc(a.id)}" data-v="admin">Ouvrir</button>` : ''}
       <details class="adm-menu"><summary class="btn" aria-label="Autres actions">⋯</summary><div class="adm-pop">${menu}</div></details></div></li>`;
   const ligneClient = c => { const as = c.arbres.map(id => arbres.find(x => x.id === id)).filter(Boolean), a = as[0];
     const ferme = a && !(a.lecteurs || []).some(e => cleEmail(e) === c.cle);
