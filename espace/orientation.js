@@ -20,7 +20,7 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
   el.innerHTML = '<div class="chargement">Chargement…</div>';
   const [prop, choix0, depots0] = await Promise.all([S.proposition(meta.id).catch(() => null), S.choix(meta.id, U.email).catch(() => null), S.mesDepots(meta.id, U.email).catch(() => [])]);
   const P = prop || {themes: [], couvertures: [], quatriemes: [], images: []};
-  let choix = {couverture_note: '', quatrieme_note: '', titre: '', theme: '', couverture: '', quatrieme: '', images: [], ambiance: '', creuser: '', usage_prive: false, ...(choix0 || {})};
+  let choix = {couverture_note: '', quatrieme_note: '', titre: '', theme: '', couverture: '', quatrieme: '', images: [], ambiance: '', creuser: '', mot: '', usage_prive: false, ...(choix0 || {})};
   P.titres = P.titres || [];
   const RECO = '<span class="or-reco">Notre recommandation</span>';
   let depots = depots0 || [];
@@ -64,6 +64,8 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
         <div class="or-lien"><label class="etiq" for="or-url">Le lien d’une autre image</label><div class="rangee"><input id="or-url" type="url" placeholder="https://…"><button type="button" class="btn" data-ajurl>Ajouter</button></div>
           <ul class="or-urls">${choix.images.filter(i => i.startsWith('http')).map(u => `<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u.length > 70 ? u.slice(0, 70) + '…' : u)}</a> <button type="button" class="btn-lien" data-rurl="${esc(u)}">Retirer</button></li>`).join('')}</ul></div>
         <label class="or-prive"><input type="checkbox" id="or-prive" ${choix.usage_prive ? 'checked' : ''}> Ces images sont pour notre livre de famille, à usage privé.</label></li>
+      <li><h2>Le mot d’ouverture</h2><p class="aide">En tête du livre, quelques lignes signées de votre main. Écrivez-les si vous le souhaitez ; sinon, nous l’écrivons à partir de ce que vous nous avez raconté, signé de votre prénom, et vous pourrez encore le changer au bon à tirer.</p>
+        <label class="cache-visuel" for="or-mot">Le mot d’ouverture</label><textarea id="or-mot" rows="6" placeholder="Par exemple : Ma chère maman, voici l’histoire de ta famille…">${esc(choix.mot)}</textarea></li>
       <li><h2>L’ambiance</h2><p class="aide">Le ton, ce qui vous plaît, ce qui vous manque, ce que vous voudriez voir plus ou moins.</p>
         <label class="cache-visuel" for="or-amb">L’ambiance</label><textarea id="or-amb" rows="5" placeholder="Par exemple : plus de photos de famille, un ton plus léger, moins de dates…">${esc(choix.ambiance)}</textarea></li>
       <li><h2>À creuser</h2><p class="aide">Un ancêtre, un lieu, une légende ou une question qui vous tient à cœur : nous y consacrons du temps de recherche avant le bon à tirer.</p>
@@ -87,7 +89,7 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
     el.querySelector('#or-prive').onchange = e => { choix.usage_prive = e.target.checked; sauver(); };
     el.querySelector('[data-ajurl]').onclick = () => { const u = el.querySelector('#or-url').value.trim(); if (!/^https?:\/\//.test(u)) return el.querySelector('#or-url').focus(); choix.images = [...new Set([...choix.images, u])]; sauver(true); };
     el.querySelectorAll('[data-rurl]').forEach(b => b.onclick = () => { choix.images = choix.images.filter(i => i !== b.dataset.rurl); sauver(true); });
-    el.querySelectorAll('textarea').forEach(t => t.oninput = () => { choix[t.dataset.note || (t.id === 'or-amb' ? 'ambiance' : 'creuser')] = t.value; sauverPlusTard(); });
+    el.querySelectorAll('textarea').forEach(t => t.oninput = () => { choix[t.dataset.note || (t.id === 'or-amb' ? 'ambiance' : t.id === 'or-mot' ? 'mot' : 'creuser')] = t.value; sauverPlusTard(); });
     el.querySelectorAll('.or-carte.autre textarea, .or-carte.autre button').forEach(x => x.addEventListener('click', e => { const r = x.closest('label').querySelector('input[type=radio]'); if (!r.checked) { r.checked = true; r.dispatchEvent(new Event('change')); } }));
     el.querySelector('[data-enreg]').onclick = () => sauver(false, true);
     const fic = el.querySelector('#or-fichier');
@@ -103,7 +105,7 @@ export async function ouvrirOrientation(el, meta, S, U, opt = {}) {
     clearTimeout(minuteur);
     const ok = el.querySelector('#or-ok');
     try {
-      await S.enregistrerChoix(meta.id, U.email, {couverture_note: (choix.couverture_note || '').slice(0, 1900), quatrieme_note: (choix.quatrieme_note || '').slice(0, 1900), titre: (choix.titre || '').slice(0, 200), theme: choix.theme || '', couverture: choix.couverture || '', quatrieme: choix.quatrieme || '', images: choix.images.slice(0, 59), ambiance: (choix.ambiance || '').slice(0, 7900), creuser: (choix.creuser || '').slice(0, 7900), usage_prive: !!choix.usage_prive});
+      await S.enregistrerChoix(meta.id, U.email, {couverture_note: (choix.couverture_note || '').slice(0, 1900), quatrieme_note: (choix.quatrieme_note || '').slice(0, 1900), titre: (choix.titre || '').slice(0, 200), theme: choix.theme || '', couverture: choix.couverture || '', quatrieme: choix.quatrieme || '', images: choix.images.slice(0, 59), ambiance: (choix.ambiance || '').slice(0, 7900), mot: (choix.mot || '').slice(0, 3900), creuser: (choix.creuser || '').slice(0, 7900), usage_prive: !!choix.usage_prive});
       if (ok) { ok.textContent = signaler ? 'Vos choix sont enregistrés. Merci !' : 'Enregistré'; setTimeout(() => { if (ok) ok.textContent = ''; }, 2500); }
     } catch (e) { console.error(e); if (ok) ok.textContent = 'L’enregistrement n’a pas marché. Réessayez dans un instant.'; }
     if (redessiner) rendre();

@@ -197,7 +197,7 @@ export async function ouvrirSuivi(el, S, arbres, opt = {}) {
     const im = (ch.images || []).map(i => { const x = (P.images || []).find(y => y.id === i); return x ? `${x.titre}${x.libre === false || x.libre === 'False' ? ' (non libre)' : ''}` : i; });
     const L = [['Titre', titre], ['Habillage', ch.theme && nomDe('themes', ch.theme)], ['Couverture', ch.couverture && (nomDe('couvertures', ch.couverture) + (ch.couverture_note ? ` : ${ch.couverture_note}` : ''))],
       ['Quatrième', ch.quatrieme && (nomDe('quatriemes', ch.quatrieme) + (ch.quatrieme_note ? ` : ${ch.quatrieme_note}` : ''))], ['Images', im.join(' ; ')],
-      ['Usage privé', ch.usage_prive ? 'oui, images non libres acceptées pour un livre de famille' : 'non coché'], ['Ambiance', ch.ambiance], ['À creuser', ch.creuser]];
+      ['Usage privé', ch.usage_prive ? 'oui, images non libres acceptées pour un livre de famille' : 'non coché'], ['Ambiance', ch.ambiance], ['À creuser', ch.creuser], ['Mot d’ouverture', ch.mot]];
     const maj = ch.maj && ch.maj.toDate ? ch.maj.toDate().toISOString() : ch.maj;
     return `<div class="sv-choix"><div class="sv-tete"><b>${esc(ch.email)}</b> · choix enregistrés le ${esc(heure(maj))}</div>
       <dl>${L.map(([k, v]) => `<dt>${k}</dt><dd>${v ? esc(v) : '<span class="petit">non renseigné</span>'}</dd>`).join('')}</dl></div>`;
