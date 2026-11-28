@@ -33,8 +33,8 @@ async function sourceFirebase() {
   const morceaux = async (id, quoi) => {
     const qs = await fb.getDocs(fb.collection(db, 'arbres', id, quoi));
     // 02/11/2026 (chantier 3) : a_valider = recherches familiales à valider, présentes dans la version admin seulement
-    const out = {personnes: {}, familles: [], actes: [], registre: {}, a_valider: []};
-    qs.docs.sort((a, b) => +a.id - +b.id).forEach(d => { let x = d.data(); if (typeof x.d === 'string') x = JSON.parse(x.d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); out.actes.push(...(x.actes || [])); Object.assign(out.registre, x.registre || {}); out.a_valider.push(...(x.a_valider || [])); });
+    const out = {personnes: {}, familles: [], actes: [], registre: {}, a_valider: [], lieux: {}};
+    qs.docs.sort((a, b) => +a.id - +b.id).forEach(d => { let x = d.data(); if (typeof x.d === 'string') x = JSON.parse(x.d); Object.assign(out.personnes, x.personnes || {}); out.familles.push(...(x.familles || [])); out.actes.push(...(x.actes || [])); Object.assign(out.registre, x.registre || {}); out.a_valider.push(...(x.a_valider || [])); Object.assign(out.lieux, x.lieux || {}); });
     return out;
   };
   return {

@@ -349,11 +349,17 @@ export function creerArbre(racineEl, data, opt = {}) {
 
   // ---------- 28/11/2026 (Laurent) : vue Carte. Chaque personne est un point posé sur son lieu de naissance (à défaut baptême,
   // mariage, décès) ; chaque lieu se touche et donne la liste des personnes qui y ont un acte (naissance, mariage, décès, acte lu).
-  let FOND = null, fondEnCours = false;
+  let FOND = null, fondEnCours = false, detailCharge = false;
+  function majDetail() {   // la carte détaillée (5000 px) quand la vue d'ensemble (2000 px) serait agrandie
+    if (mode !== 'carte' || detailCharge || (BBF[2] - BBF[0]) * SC * KC * k < 1900) return;
+    detailCharge = true; const im = svg.querySelector('.fond-detail'); if (im) im.setAttribute('href', 'carte/fond-5000.jpg');
+  }
   const LIEUX = data.lieux || {};
   const nomLieu = s => { const ps = String(s).split(/,(?![^(]*\))/).map(x => x.trim()); const q = ps.find(x => x.includes('(')) || ps[ps.length - 1]; return q.replace(/\s*\(.*$/, ''); };
   const qualLieu = s => { const m = String(s).match(/\(([^)]*)\)/); return m ? m[1] : ''; };
-  const KC = Math.cos(rad(46.5)), SC = 230;
+  // 28/11/2026 (Laurent) : en fond, la carte au modèle du site et des livres (relief, fleuves, départements), dans la projection
+  // de carte_relief (site-outils/carte_espace.py) : cadre BB, k = cos de la latitude moyenne ; détail chargé quand on zoome.
+  const BBF = [-5.6, 41.2, 10.2, 51.4], KC = Math.cos(rad((BBF[1] + BBF[3]) / 2)), SC = 230;
   const proj = ([lon, lat]) => [lon * SC * KC, -lat * SC];
   let lieuxVus = {};
   function chargerFond() {
@@ -361,9 +367,12 @@ export function creerArbre(racineEl, data, opt = {}) {
     import('./carte-fond.js').then(m => { FOND = m.FOND; if (mode === 'carte') { const g = svg.querySelector('.carte-fond'); if (g) { g.innerHTML = fondSVG(); g.animate([{opacity: 0}, {opacity: 1}], {duration: 500}); } } }).catch(() => {}).finally(() => { fondEnCours = false; });
   }
   function fondSVG() {
-    if (!FOND) return '';
+    const [fx, fy] = proj([BBF[0], BBF[3]]), fw = (BBF[2] - BBF[0]) * SC * KC, fh = (BBF[3] - BBF[1]) * SC;
+    const raster = `<image class="fond-relief" href="carte/fond-2000.jpg" x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}" preserveAspectRatio="none"/>`
+      + `<image class="fond-detail" ${detailCharge ? 'href="carte/fond-5000.jpg"' : ''} x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}" preserveAspectRatio="none"/>`;
+    if (!FOND) return raster;
     const d = arr => { let s = ''; for (let i = 0; i < arr.length; i += 2) { const [x, y] = proj([arr[i] / 100, arr[i + 1] / 100]); s += (i ? 'L' : 'M') + x.toFixed(0) + ' ' + y.toFixed(0); } return s + 'Z'; };
-    return `<path class="terre" d="${FOND.terre.map(d).join('')}"/><path class="france" d="${FOND.fr.map(d).join('')}"/><path class="deps" d="${FOND.deps.map(d).join('')}"/>`;
+    return `<path class="terre" d="${FOND.terre.map(d).join('')}"/>` + raster;
   }
   function evenementsDe(id) {   // [{lieu, lib, an}]
     const p = P[id], out = [], f = p.s === 'F' ? 'e' : '';
@@ -613,11 +622,7 @@ export function creerArbre(racineEl, data, opt = {}) {
       const n1 = positions[focus];
       if (ecran && n1) {
         const fy = n1.cy ?? (n1.y + H() / 2);
-        if (mode === 'roue') {   // la roue entière tient autour de la personne restée en place (au besoin un peu plus petite)
-          const r = vue.getBoundingClientRect(), R = Math.max(1, ...Object.values(positions).map(n => Math.hypot(n.cx - n1.cx, (n.cy ?? (n.y + H() / 2)) - fy) + 40));
-          const place = Math.min(ecran[0], r.width - ecran[0], ecran[1] - 100, r.height - ecran[1]) - 12;
-          if (place > 0) k = Math.max(kmin(), k * 0.55, Math.min(k, place / R));
-        }
+        // 28/11/2026 (Laurent) : la roue garde sa grande taille, quitte à être coupée : on zoome et on se déplace ensuite.
         tx = ecran[0] - n1.cx * k; ty = ecran[1] - fy * k; appliquer();
       }
     });
@@ -632,7 +637,7 @@ export function creerArbre(racineEl, data, opt = {}) {
   function appliquer() {
     scene.style.transform = `translate(${tx}px,${ty}px) scale(${k})`;
     vue.classList.toggle('compact', mode === 'arbre' && k < 0.5);
-    majAxe(); scene.style.setProperty('--ki', String(Math.min(3, 1 / k)));
+    majAxe(); scene.style.setProperty('--ki', String(Math.min(3, 1 / k))); if (typeof majDetail === 'function') majDetail();
     try { localStorage.setItem('vr-vue-' + data.id, JSON.stringify({tx, ty, k, focus})); } catch (e) {}
   }
   function centrerSur(id, kk = k) {
