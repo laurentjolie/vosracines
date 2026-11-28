@@ -3,6 +3,20 @@
 const W = () => (innerWidth < 720 ? 168 : 220), H = () => (innerWidth < 720 ? 80 : 92);
 const GAP = 28, GAP_COUPLE = 48, GAP_GEN = 72, PLUS = 3;
 const PROF = () => (innerWidth < 720 ? 2 : 3);
+// 28/11/2026 (Laurent) : trois formes de l'arbre (arbre, roue, frise) et un passage animé de l'une à l'autre
+try { CSS.registerProperty({name: '--fs', syntax: '<length>', inherits: true, initialValue: '16px'}); } catch (e) {}
+const NS = 'http://www.w3.org/2000/svg';
+const MODES = {arbre: 'Arbre', roue: 'Roue', frise: 'Frise'};
+const ICONES = {
+  arbre: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="8.5" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v3.5h11V8M12 11.5V16"/></svg>',
+  roue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M3 12h5.5M15.5 12H21M12 3v5.5M12 15.5V21"/></svg>',
+  frise: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 20h18M6 20v-2M12 20v-2M18 20v-2"/><rect x="3" y="11" width="10" height="4" rx="1"/><rect x="9" y="4" width="12" height="4" rx="1"/></svg>'};
+const PERIODES = [[1789, 1799, 'Révolution'], [1803, 1815, 'Guerres napoléoniennes'], [1870, 1871, 'Guerre de 1870'], [1914, 1918, 'Première Guerre mondiale'], [1939, 1945, 'Seconde Guerre mondiale']];
+const rad = a => a * Math.PI / 180;
+const pt = (r, a) => `${(r * Math.cos(rad(a))).toFixed(1)} ${(r * Math.sin(rad(a))).toFixed(1)}`;
+function secteur(r0, r1, a0, a1) { const g = a1 - a0 > 180 ? 1 : 0; return `M${pt(r1, a0)} A${r1} ${r1} 0 ${g} 1 ${pt(r1, a1)} L${pt(r0, a1)} A${r0} ${r0} 0 ${g} 0 ${pt(r0, a0)} Z`; }
+const lisible = a => { let r = ((a % 360) + 360) % 360; if (r > 90 && r <= 270) r -= 180; else if (r > 270) r -= 360; return r; };
+const rayon = g => (g <= 3 ? 120 + g * 100 : 420 + (g - 3) * 150);
 const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 // 02/11/2026 (audit UX, D1) : 5e élément = le mot court affiché sur la carte, à la place du glyphe (couleur seule, 15 px)
 const PREUVE = {acte: ['●', 'p-acte', 'Acte lu', 'nous avons lu l’acte', 'Acte'], piste: ['◐', 'p-piste', 'Piste', 'indiqué par d’autres chercheurs, pas encore vérifié', 'Piste'],
@@ -73,6 +87,8 @@ export function creerArbre(racineEl, data, opt = {}) {
   const nivLien = x => { const n = (x.li && x.li.niv) || x.nl || ''; return n.startsWith('hyp') ? 'hypothese' : n; };
   const egoNom = (P[ego] && (P[ego].u || P[ego].p) || '').split(' ')[0];
   let focus = ego, ouverts = {}, choisi = null, k = 1, tx = 0, ty = 0, positions = {}, tout = false;
+  let mode = (() => { try { const m = localStorage.getItem('vr-mode'); return MODES[m] ? m : 'arbre'; } catch (e) { return 'arbre'; } })();
+  let vusCles = {}, bornes = null, secteurs = [], rafDecor = 0, enCours = [];
 
   racineEl.innerHTML = `
   <div class="vue" tabindex="-1"><div class="scene"><svg></svg><div class="cartes"></div></div></div>
@@ -83,6 +99,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     <ul class="suggestions" id="sugg" role="listbox" hidden></ul>
   </div>
   <div class="fil" hidden></div>
+  <div class="flottant modes" role="group" aria-label="Forme de l’arbre">${Object.entries(MODES).map(([m, lib]) => `<button data-mode="${m}" aria-pressed="false" title="Voir sous forme de ${lib.toLowerCase()}">${ICONES[m]}<span>${lib}</span></button>`).join('')}</div>
   <div class="flottant ensemble"><button class="ens-menu" data-a="menu" aria-expanded="false">Plus ▾</button><button data-a="entier">Ouvrir l’arbre en entier</button>${Object.values(P).filter(p => p.pep && !p.cache).length ? `<button data-a="pepites">✦ Les personnes bien documentées (${Object.values(P).filter(p => p.pep && !p.cache).length})</button>` : ''}${(data.actes || []).length ? `<button data-a="actes">Les actes du livre (${data.actes.length})</button>` : ''}${AV.length ? `<button data-a="avalider">Recherches à valider (${AV.length})</button>` : ''}<button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
   <div class="acte-vue" hidden role="dialog" aria-modal="true" aria-label="Acte"></div>
   <div class="flottant zoom">
@@ -142,7 +159,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     const gmax = Math.max(...noeuds.map(n => n.g));
     const y = g => (gmax - g) * (h + GAP_GEN) + 70;
     positions = {};
-    for (const n of noeuds) { n.x = n.cx - w / 2; n.y = y(n.g); positions[n.id] = n; }
+    for (const n of noeuds) { n.x = n.cx - w / 2; n.y = y(n.g); n.w = w; n.h = h; positions[n.id] = n; }
     for (const n of noeuds) if (n.pere || n.mere) liens.push(n);
     // enfants du point focal (sous lui), sauf l'ego
     const desc = [];
@@ -154,22 +171,25 @@ export function creerArbre(racineEl, data, opt = {}) {
     return {noeuds, liens, plusBtns, desc, w, h};
   }
 
-  function carteHTML(id, x, y, extra = '') {
+  function carteHTML(id, x, y, extra = '', geo = {}, cleCarte = id) {
     const p = P[id]; if (!p) return '';
-    if (p.cache) return `<div class="carte vivant" style="left:${x}px;top:${y}px" title="Personne vivante : seul le prénom est affiché." role="img" aria-label="${esc(p.p)}, personne vivante : seul le prénom est affiché">
+    // 28/11/2026 : géométrie propre à la roue et à la frise (taille, rotation, taille du texte) et clé stable pour l'animation
+    const st = `left:${x}px;top:${y}px` + (geo.w ? `;width:${geo.w.toFixed(1)}px;height:${geo.h.toFixed(1)}px;--fs:${geo.fs}px` : '') + (geo.rot ? `;transform:rotate(${geo.rot.toFixed(2)}deg)` : '');
+    const da = `data-k="${esc(cleCarte)}" data-g="${geo.g || 0}"${geo.rot ? ` data-rot="${geo.rot.toFixed(2)}"` : ''}`;
+    if (p.cache) return `<div class="carte vivant ${extra}" ${da} style="${st}" title="Personne vivante : seul le prénom est affiché." role="img" aria-label="${esc(p.p)}, personne vivante : seul le prénom est affiché">
       <span class="nom">${esc(p.p)}</span><svg class="cadenas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>`;
     const l = lignee(p), pv = preuve(p.niv), est = id === ego;
     const dates = [an(p.na) || an(p.ba), an(p.de)].some(Boolean) ? `${an(p.na) || an(p.ba) || '?'}${p.de ? ' · ' + an(p.de) : (p.v ? '' : ' · ?')}` : '';
     const lieu = lieuCourt((p.na || p.ba || {}).p) || (p.me && p.me[0] ? met(p.me[0])[0] : '');
     const lab = [nomComplet(p), dates.replace(' · ', ' à '), lieu, pv ? pv[2] : '', p.pep ? 'personne bien documentée' : ''].filter(Boolean).join(', ');
-    return `<button class="carte ${est ? 'ego' : l} ${choisi === id ? 'choisie' : ''} ${p.pep ? 'pepite' : ''} ${pv ? 'avec-preuve' : ''} ${extra}" data-id="${esc(id)}" style="left:${x}px;top:${y}px" ${est ? `data-ruban="${esc(egoNom)}"` : ''} aria-label="${esc(lab)}">
+    return `<button class="carte ${est ? 'ego' : l} ${choisi === id ? 'choisie' : ''} ${p.pep ? 'pepite' : ''} ${pv ? 'avec-preuve' : ''} ${extra}" data-id="${esc(id)}" ${da} style="${st}" ${est ? `data-ruban="${esc(egoNom)}"` : ''} aria-label="${esc(lab)}">
       <span class="nom" title="${esc(nomComplet(p))}">${esc(nomComplet(p))}</span><span class="dates">${esc(dates)}</span><span class="lieu">${esc(lieu)}</span>
       ${pv ? `<span class="preuve mot ${pv[1]}" aria-hidden="true">${pv[4]}</span>` : ''}${p.pep ? '<span class="etoile" aria-hidden="true">✦</span>' : ''}</button>`;
   }
 
-  function dessiner() {
+  function dessinerArbre() {
     const L = construire(), {w, h} = L; let html = '', paths = '';
-    for (const n of L.noeuds) html += carteHTML(n.id, n.x, n.y);
+    for (const n of L.noeuds) html += carteHTML(n.id, n.x, n.y, '', {g: n.g}, cle(n.id));
     for (const n of L.liens) {
       const mid = n.y - GAP_GEN / 2, cl = colLien(n), L = lienDe(P[n.id]);
       const st = `stroke="${cl}" stroke-width="${L.w}" fill="none" stroke-linecap="round" ${L.d ? `stroke-dasharray="${L.d}"` : ''}`;
@@ -184,11 +204,231 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (L.desc.length) {
       const foc = positions[focus];
       html += `<span class="titre-enfants" style="left:${foc.cx}px;top:${foc.y + h + 20}px">${L.desc.length === 1 ? 'Parmi ses enfants' : 'Ses enfants'}</span>`;
-      for (const d of L.desc) { html += carteHTML(d.id, d.x, d.y, 'desc'); const L = lienDe(P[d.id]); paths += `<path d="M${foc.cx} ${foc.y + h} V${foc.y + h + 14} M${d.x + w / 2} ${d.y} V${d.y - 10} H${foc.cx}" stroke="var(--line-strong)" stroke-width="${L.w}" ${L.d ? `stroke-dasharray="${L.d}"` : ''} fill="none"/>`; }
+      for (const d of L.desc) { html += carteHTML(d.id, d.x, d.y, 'desc', {g: 0}, cle(d.id)); const L = lienDe(P[d.id]); paths += `<path d="M${foc.cx} ${foc.y + h} V${foc.y + h + 14} M${d.x + w / 2} ${d.y} V${d.y - 10} H${foc.cx}" stroke="var(--line-strong)" stroke-width="${L.w}" ${L.d ? `stroke-dasharray="${L.d}"` : ''} fill="none"/>`; }
     }
     svg.innerHTML = paths; cartesEl.innerHTML = html;
+  }
+
+  // ---------- 28/11/2026 (Laurent) : trois formes de l'arbre et passage animé ----------
+  // Arbre (ci-dessus), roue (le point focal au centre, ses ascendants en anneaux, comme demandé par Stéphane) et frise
+  // (chaque personne est un rectangle posé sur l'axe du temps, de sa naissance à sa mort). D'une forme à l'autre, chaque
+  // carte glisse, tourne et se redimensionne jusqu'à sa nouvelle place ; celles qui apparaissent sortent de leur enfant,
+  // celles qui disparaissent y rentrent ; le décor (traits, secteurs, axe) se dessine ensuite.
+  const cle = id => { const n = (vusCles[id] = (vusCles[id] || 0) + 1); return n === 1 ? id : `${id}~${n}`; };
+  const kmin = () => ((tout || mode !== 'arbre') ? 0.05 : 0.25);
+  function dessiner() {
+    finirDecor(); vusCles = {}; bornes = null; positions = {}; secteurs = [];
+    vue.dataset.mode = mode;
+    if (mode === 'roue') dessinerRoue(); else if (mode === 'frise') dessinerFrise(); else dessinerArbre();
     majFil();
   }
+  function dessinerRoue() {
+    const G = Math.min(hauteur(focus), tout ? 9 : 7), R = rayon(G);
+    let html = '', fonds = '', vides = '';
+    const cw = innerWidth < 720 ? 176 : 204, ch = innerWidth < 720 ? 80 : 88;
+    html += carteHTML(focus, -cw / 2, -ch / 2, 'centre', {g: 0, w: cw, h: ch, fs: 16}, cle(focus));
+    positions[focus] = {x: -cw / 2, y: -ch / 2, w: cw, h: ch, cx: 0, cy: 0};
+    const file = [{id: focus, s: 1, g: 0}];
+    while (file.length) {
+      const {id, s, g} = file.shift(); const x = P[id], f = parents[id];
+      if (g >= G || x.cache) continue;
+      [[f && f.h, 0], [f && f.w, 1]].forEach(([z, d]) => {
+        const g2 = g + 1, s2 = s * 2 + d, n = 2 ** g2, span = 360 / n, a0 = 180 + (s2 - n) * span, a1 = a0 + span, r0 = rayon(g), r1 = rayon(g2);
+        if (!z || !P[z]) { vides += `<path class="vide" d="${secteur(r0 + 3, r1 - 3, a0 + 0.5, a1 - 0.5)}"/>`; return; }
+        const p = P[z], l = lignee(p), am = (a0 + a1) / 2, rm = (r0 + r1) / 2, arc = rad(span) * rm, ep = r1 - r0;
+        fonds += `<path class="sect" d="${secteur(r0, r1, a0, a1)}" style="fill:${p.cache ? 'var(--bg-2)' : LIGNEE.includes(l) ? `var(--${l}-tint)` : 'var(--band)'}"/>`;
+        secteurs.push({r0, r1, a0, a1, g: g2});
+        let w, h, rot, fs;
+        if (g2 <= 3) { w = Math.min(arc * 0.84, 236); h = ep * 0.66; rot = am + 90; fs = [16, 17, 15, 13.5][g2]; }
+        else { w = ep * 0.88; h = Math.min(arc * 0.8, 46); rot = am; fs = Math.max(7.5, Math.min(13.5, h * 0.34)); }
+        rot = lisible(rot);
+        const cx = rm * Math.cos(rad(am)), cy = rm * Math.sin(rad(am));
+        html += carteHTML(z, cx - w / 2, cy - h / 2, 'r' + (h < 30 ? ' court' : ''), {g: g2, w, h, fs, rot}, cle(z));
+        if (!positions[z]) positions[z] = {x: cx - w / 2, y: cy - h / 2, w, h, cx, cy};
+        file.push({id: z, s: s2, g: g2});
+      });
+    }
+    svg.innerHTML = `<g class="roue-fond">${fonds}</g><g class="roue-vides">${vides}</g><circle class="roue-centre" r="${rayon(0)}"/>${G ? `<circle class="roue-bord" r="${R + 8}"/>` : ''}`;
+    svg.querySelectorAll('path.sect').forEach((el, i) => { secteurs[i].el = el; });
+    cartesEl.innerHTML = html;
+    bornes = {x0: -R - 24, x1: R + 24, y0: -R - 24, y1: R + 24};
+  }
+  const nomGen = g => (g === 0 ? (nomComplet(P[focus]).split(' ')[0] || '') : (['', 'Parents', 'Grands-parents', 'Arrière-grands-parents'][g] || `Génération ${g}`));
+  function dessinerFrise() {
+    const Gm = tout ? 14 : 6, PX = innerWidth < 720 ? 4 : 4.6, HC = 34, GL = 5, GB = 28, ici = new Date().getFullYear();
+    const liste = [], file = [{id: focus, s: 1, g: 0, enf: null}];
+    while (file.length) {
+      const it = file.shift(); liste.push(it);
+      const x = P[it.id], f = parents[it.id];
+      if (it.g < Gm && f && !x.cache) [[f.h, 0], [f.w, 1]].forEach(([z, d]) => { if (z && P[z]) file.push({id: z, s: it.s * 2 + d, g: it.g + 1, enf: it}); });
+    }
+    for (const it of liste) {   // les enfants passent avant leurs parents : une naissance inconnue s'estime d'après l'enfant
+      const p = P[it.id]; if (p.cache) continue;
+      let b = +an(p.na) || +an(p.ba) || 0, e = +an(p.de) || 0, est = false;
+      if (!b && e) { b = e - 60; est = true; }
+      if (!b && it.enf && it.enf.b) { b = it.enf.b - 30; est = true; }
+      if (!b) continue;
+      if (!e) { if (p.v) e = ici; else { e = b + 62; est = true; } }
+      Object.assign(it, {b, e: Math.max(e, b + 1), est, ok: true});
+    }
+    for (const it of [...liste].reverse()) {   // sans aucune date (souvent un vivant) : d'après ses parents
+      const p = P[it.id]; if (it.ok || p.cache) continue;
+      const pa = liste.filter(z => z.enf === it && z.ok); if (!pa.length) continue;
+      const b = Math.max(...pa.map(z => z.b)) + 28;
+      Object.assign(it, {b, e: p.v ? Math.max(ici, b + 1) : b + 62, est: true, ok: true});
+    }
+    const vis = liste.filter(i => i.ok), sans = liste.filter(i => !i.ok && !P[i.id].cache).length;
+    if (!vis.length) { svg.innerHTML = ''; cartesEl.innerHTML = '<p class="frise-vide">Aucune date connue pour placer ces personnes sur une frise.</p>'; return; }
+    const debut = Math.floor((Math.min(...vis.map(i => i.b)) - 8) / 10) * 10, finA = Math.ceil((Math.max(...vis.map(i => i.e)) + 4) / 10) * 10, X = a => (a - debut) * PX;
+    const parG = {}; vis.forEach(i => (parG[i.g] = parG[i.g] || []).push(i));
+    let base = 0; const bandes = [];
+    Object.keys(parG).map(Number).sort((a, b) => a - b).forEach(g => {
+      const L = parG[g].sort((a, b) => a.s - b.s), voies = [];
+      for (const i of L) {
+        i.x = X(i.b); i.w = Math.max(104, X(i.e) - i.x);
+        let v = voies.findIndex(z => z + 10 <= i.x); if (v < 0) { v = voies.length; voies.push(0); }
+        voies[v] = i.x + i.w; i.voie = v;
+      }
+      const bas = base - GB, haut = bas - voies.length * (HC + GL);
+      L.forEach(i => { i.y = bas - (i.voie + 1) * (HC + GL) + GL; });
+      bandes.push({g, haut, bas}); base = haut;
+    });
+    const xa = X(debut) - 190, xb = X(finA) + 24, haut = base - 40;
+    let fond = '', axe = '', liens = '', html = '';
+    bandes.forEach((b, j) => {
+      if (j % 2) fond += `<rect class="bande" x="${xa}" y="${b.haut + GL}" width="${xb - xa}" height="${b.bas - b.haut}"/>`;
+      fond += `<text class="nom-bande" x="${X(debut) - 18}" y="${(b.haut + b.bas) / 2 + 8}">${esc(nomGen(b.g))}</text>`;
+    });
+    PERIODES.filter(([a, z]) => z >= debut && a <= finA).forEach(([a, z, t], j) => {
+      fond += `<rect class="periode" x="${X(a)}" y="${haut}" width="${Math.max(4, X(z + 1) - X(a))}" height="${-haut}"/><text class="periode-t" x="${X(a)}" y="${haut - 10 - (j % 2) * 18}">${esc(t)}</text>`;
+    });
+    for (let a = debut; a <= finA; a += 10) {
+      const c50 = a % 50 === 0, c100 = a % 100 === 0;
+      if (c50) fond += `<path class="grille${c100 ? ' siecle' : ''}" d="M${X(a)} ${haut} V0"/>`;
+      axe += `<path class="tic" d="M${X(a)} 0 V${c50 ? 10 : 5}"/>` + (c50 ? `<text class="annee${c100 ? ' siecle' : ''}" x="${X(a)}" y="32">${a}</text>` : '');
+    }
+    if (ici <= finA) axe += `<path class="ici" d="M${X(ici)} ${haut} V0"/><text class="ici-t" x="${X(ici)}" y="${haut - 10}">Aujourd’hui</text>`;
+    vis.forEach(i => {   // trait vertical du parent vers l'enfant, à l'année de naissance de l'enfant : on lit l'âge du parent
+      const c = i.enf; if (!c || !c.ok) return;
+      const cible = c.x + (i.s % 2 ? 24 : 10), xp = Math.min(Math.max(cible, i.x + 6), i.x + i.w - 6), Ln = lienDe(P[c.id]), l = lignee(P[i.id]);
+      const col = LIGNEE.includes(l) ? `var(--${l})` : 'var(--line-strong)';
+      const d = xp === cible ? `M${xp} ${i.y + HC} V${c.y}` : `M${xp} ${i.y + HC} V${c.y - 10} H${cible} V${c.y}`;
+      liens += `<path d="${d}" stroke="${col}" stroke-width="${Ln.w * 0.8}" ${Ln.d ? `stroke-dasharray="${Ln.d}"` : ''}/><circle cx="${xp}" cy="${i.y + HC}" r="3.2" fill="${col}"/>`;
+    });
+    vis.forEach(i => {
+      html += carteHTML(i.id, i.x, i.y, 'f' + (i.est ? ' estime' : '') + (i.w < 190 ? ' etroit' : ''), {g: i.g, w: i.w, h: HC, fs: 14}, cle(i.id));
+      if (!positions[i.id]) positions[i.id] = {x: i.x, y: i.y, w: i.w, h: HC, cx: i.x + i.w / 2, cy: i.y + HC / 2};
+    });
+    if (sans) html += `<p class="frise-note" style="left:${X(debut)}px;top:50px">${sans} personne${sans > 1 ? 's' : ''} sans date connue ${sans > 1 ? 'ne figurent' : 'ne figure'} pas sur la frise.</p>`;
+    svg.innerHTML = `<g class="frise-fond">${fond}</g><g class="frise-liens">${liens}</g><g class="frise-axe"><path class="axe-ligne" d="M${X(debut) - 10} 0 H${xb}"/>${axe}</g>`;
+    cartesEl.innerHTML = html;
+    bornes = {x0: xa, x1: xb, y0: haut - 50, y1: 80};
+  }
+
+  // ---------- passage animé ----------
+  const reduit = matchMedia('(prefers-reduced-motion: reduce)');
+  const DUREE = 860, COURBE = 'cubic-bezier(.62,.02,.2,1)';
+  function finirDecor() { cancelAnimationFrame(rafDecor); rafDecor = 0; secteurs.forEach(z => z.el && z.el.setAttribute('d', secteur(z.r0, z.r1, z.a0, z.a1))); }
+  function finirAnims() {
+    enCours.forEach(a => { try { a.finish(); } catch (e) {} }); enCours = [];
+    cartesEl.querySelectorAll('.fantome').forEach(e => e.remove()); scene.querySelectorAll('svg.fantome-svg').forEach(e => e.remove());
+    cartesEl.querySelectorAll('.r-attente').forEach(e => e.classList.replace('r-attente', 'r'));
+    finirDecor();
+  }
+  const fsDe = el => getComputedStyle(el).getPropertyValue('--fs').trim() || '16px';
+  function releve() {
+    const m = {};
+    cartesEl.querySelectorAll('[data-k]').forEach(el => {
+      const L = parseFloat(el.style.left) || 0, T = parseFloat(el.style.top) || 0, w = el.offsetWidth, h = el.offsetHeight;
+      m[el.dataset.k] = {el, L, T, w, h, cx: L + w / 2, cy: T + h / 2, rot: +el.dataset.rot || 0, fs: fsDe(el), r: el.classList.contains('r')};
+    });
+    return m;
+  }
+  function ancre(id, cartes) {   // la carte la plus proche en descendant (enfant, petit-enfant…) dans un ensemble de cartes
+    const vu = new Set([id]); let f = [id];
+    for (let n = 0; n < 14 && f.length && vu.size < 400; n++) {
+      const suiv = [];
+      for (const x of f) for (const z of enfants[x] || []) { if (cartes[z]) return cartes[z]; if (!vu.has(z)) { vu.add(z); suiv.push(z); } }
+      f = suiv;
+    }
+    return null;
+  }
+  function transition(changer) {
+    finirAnims();
+    const ok = !reduit.matches && typeof Element.prototype.animate === 'function' && cartesEl.querySelectorAll('[data-k]').length < 450;
+    const av = ok ? releve() : null, cam0 = scene.style.transform, svg0 = ok ? svg.innerHTML : '';
+    changer();
+    if (av && cartesEl.querySelectorAll('[data-k]').length < 450) animer(av, cam0, svg0);
+  }
+  function animer(av, cam0, svg0) {
+    const run = a => { enCours.push(a); return a; };
+    const els = [...cartesEl.querySelectorAll('[data-k]')];
+    // roue : les cartes gardent leur fond pendant le vol et le perdent en arrivant sur leur secteur
+    const attente = mode === 'roue' ? els.filter(el => el.classList.contains('r') && av[el.dataset.k] && !av[el.dataset.k].r) : [];
+    attente.forEach(el => el.classList.replace('r', 'r-attente'));
+    const geo = els.map(el => ({el, k: el.dataset.k, id: el.dataset.k.split('~')[0], L: parseFloat(el.style.left) || 0, T: parseFloat(el.style.top) || 0,
+      w: el.offsetWidth, h: el.offsetHeight, rot: +el.dataset.rot || 0, g: +el.dataset.g || 0, fs: fsDe(el)}));
+    const neuf = {}; geo.forEach(x => { neuf[x.k] = x; });
+    run(scene.animate([{transform: cam0 || 'none'}, {transform: scene.style.transform || 'none'}], {duration: DUREE, easing: COURBE}));
+    for (const x of geo) {
+      const o = av[x.k], delai = Math.min(Math.max(x.g, 0), 9) * 34;
+      let de;
+      if (o) de = {transform: `translate(${o.cx - (x.L + o.w / 2)}px,${o.cy - (x.T + o.h / 2)}px) rotate(${o.rot}deg)`, width: o.w + 'px', height: o.h + 'px', '--fs': o.fs, opacity: 1};
+      else {
+        const a = ancre(x.id, av), c = a ? [a.cx, a.cy] : [x.L + x.w / 2, x.T + x.h / 2];
+        de = {transform: `translate(${c[0] - (x.L + x.w * 0.2)}px,${c[1] - (x.T + x.h * 0.2)}px) rotate(${a ? a.rot : x.rot}deg)`, width: x.w * 0.4 + 'px', height: x.h * 0.4 + 'px', '--fs': x.fs, opacity: 0};
+      }
+      run(x.el.animate([de, {transform: `translate(0px,0px) rotate(${x.rot}deg)`, width: x.w + 'px', height: x.h + 'px', '--fs': x.fs, opacity: 1}],
+        {duration: DUREE, delay: delai, easing: COURBE, fill: 'backwards'}));
+    }
+    if (attente.length) setTimeout(() => attente.forEach(el => el.classList.replace('r-attente', 'r')), DUREE * 0.5);
+    for (const k0 in av) if (!neuf[k0]) {   // les cartes qui quittent la vue rentrent dans leur enfant
+      const o = av[k0], el = o.el;
+      el.classList.add('fantome'); el.removeAttribute('data-id'); el.removeAttribute('data-k'); el.setAttribute('aria-hidden', 'true'); el.tabIndex = -1;
+      cartesEl.appendChild(el);
+      const a = ancre(k0.split('~')[0], neuf), c = a ? [a.L + a.w / 2, a.T + a.h / 2] : [o.cx, o.cy];
+      const fx = el.animate([{transform: `translate(0px,0px) rotate(${o.rot}deg)`, width: o.w + 'px', height: o.h + 'px', opacity: 1},
+        {transform: `translate(${c[0] - (o.L + o.w * 0.2)}px,${c[1] - (o.T + o.h * 0.2)}px) rotate(${a ? a.rot : o.rot}deg)`, width: o.w * 0.4 + 'px', height: o.h * 0.4 + 'px', opacity: 0}],
+        {duration: DUREE * 0.75, easing: COURBE, fill: 'forwards'});
+      fx.onfinish = () => el.remove(); run(fx);
+    }
+    if (svg0) {
+      const gs = document.createElementNS(NS, 'svg'); gs.setAttribute('class', 'fantome-svg'); gs.innerHTML = svg0; scene.insertBefore(gs, svg);
+      const fx = gs.animate([{opacity: 1}, {opacity: 0}], {duration: 300, easing: 'ease-out', fill: 'forwards'}); fx.onfinish = () => gs.remove(); run(fx);
+    }
+    cartesEl.querySelectorAll('.anneau,.plus,.titre-enfants,.frise-note').forEach(e => run(e.animate([{opacity: 0}, {opacity: 1}], {duration: 320, delay: DUREE * 0.75, fill: 'backwards'})));
+    entreeDecor(run);
+  }
+  function entreeDecor(run) {
+    if (mode === 'arbre') { run(svg.animate([{opacity: 0}, {opacity: 1}], {duration: 420, delay: DUREE * 0.62, fill: 'backwards'})); return; }
+    if (mode === 'frise') {
+      [['.frise-fond', 140], ['.frise-axe', 0], ['.frise-liens', DUREE * 0.72]].forEach(([q, d]) => { const g = svg.querySelector(q); if (g) run(g.animate([{opacity: 0}, {opacity: 1}], {duration: 460, delay: d, fill: 'backwards'})); });
+      const axe = svg.querySelector('.axe-ligne');
+      if (axe) { const L = axe.getTotalLength(); axe.style.strokeDasharray = `${L}`; run(axe.animate([{strokeDashoffset: `${L}`}, {strokeDashoffset: '0'}], {duration: DUREE, easing: COURBE})); }
+      return;
+    }
+    // roue : les secteurs se déplient du centre vers l'extérieur, anneau après anneau
+    ['.roue-centre', '.roue-vides', '.roue-bord'].forEach((q, j) => { const e = svg.querySelector(q); if (e) run(e.animate([{opacity: 0}, {opacity: 1}], {duration: 420, delay: j ? DUREE * 0.7 : 0, fill: 'backwards'})); });
+    const t0 = performance.now();
+    const pas = t => {
+      let fini = true;
+      for (const z of secteurs) {
+        const p = Math.min(1, Math.max(0, (t - t0 - 60 - z.g * 75) / 600)); if (p < 1) fini = false;
+        const e = 1 - Math.pow(1 - p, 3), am = (z.a0 + z.a1) / 2, da = (z.a1 - z.a0) / 2 * e;
+        z.el.setAttribute('d', e > 0.002 ? secteur(z.r0, z.r0 + (z.r1 - z.r0) * e, am - da, am + da) : 'M0 0');
+      }
+      rafDecor = fini ? 0 : requestAnimationFrame(pas);
+    };
+    secteurs.forEach(z => z.el.setAttribute('d', 'M0 0'));
+    rafDecor = requestAnimationFrame(pas);
+  }
+  const modesEl = racineEl.querySelector('.modes');
+  function majModes() { modesEl.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode))); }
+  majModes();
+  modesEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-mode]'); if (!b || b.dataset.mode === mode) return;
+    transition(() => { mode = b.dataset.mode; try { localStorage.setItem('vr-mode', mode); } catch (x) {} majModes(); dessiner(); premiereVue(); });
+  });
   function colLien(n) {
     const l = lignee(P[n.id]);
     if (n.g >= 2 && l && l !== 'ego') return `var(--${l})`;
@@ -198,25 +438,35 @@ export function creerArbre(racineEl, data, opt = {}) {
   // ---------- vue (déplacement, zoom) ----------
   function appliquer() {
     scene.style.transform = `translate(${tx}px,${ty}px) scale(${k})`;
-    vue.classList.toggle('compact', k < 0.5);
+    vue.classList.toggle('compact', mode === 'arbre' && k < 0.5);
     try { localStorage.setItem('vr-vue-' + data.id, JSON.stringify({tx, ty, k, focus})); } catch (e) {}
   }
   function centrerSur(id, kk = k) {
     const n = positions[id]; if (!n) return;
     k = kk; const r = vue.getBoundingClientRect();
-    tx = r.width / 2 - n.cx * k; ty = r.height * 0.62 - (n.y + H() / 2) * k; appliquer();
+    tx = r.width / 2 - n.cx * k; ty = r.height * (mode === 'arbre' ? 0.62 : 0.52) - (n.cy ?? (n.y + H() / 2)) * k; appliquer();
   }
   function toutVoir() {
     const ns = Object.values(positions); if (!ns.length) return;
-    const x0 = Math.min(...ns.map(n => n.x)), x1 = Math.max(...ns.map(n => n.x + W())), y0 = Math.min(...ns.map(n => n.y)), y1 = Math.max(...ns.map(n => n.y + H()));
+    let x0 = Math.min(...ns.map(n => n.x)), x1 = Math.max(...ns.map(n => n.x + (n.w || W()))), y0 = Math.min(...ns.map(n => n.y)), y1 = Math.max(...ns.map(n => n.y + (n.h || H())));
+    if (bornes) ({x0, x1, y0, y1} = bornes);
     const r = vue.getBoundingClientRect();
-    k = Math.max(tout ? 0.05 : 0.25, Math.min(1.2, Math.min((r.width - 40) / (x1 - x0), (r.height - 140) / (y1 - y0))));
+    k = Math.max(kmin(), Math.min(1.2, Math.min((r.width - 40) / (x1 - x0), (r.height - 140) / (y1 - y0))));
     tx = (r.width - (x1 - x0) * k) / 2 - x0 * k; ty = 110 + (r.height - 140 - (y1 - y0) * k) / 2 - y0 * k; appliquer();
   }
-  function premiereVue() { toutVoir(); const mini = innerWidth < 720 ? 0.62 : 0.45; if (k < mini) centrerSur(ego, mini); }
+  function premiereVue() {
+    if (mode === 'frise' && bornes) {   // la frise se lit en largeur : tout le temps à l'écran, les générations au-dessus en faisant glisser
+      const r = vue.getBoundingClientRect(), lg = bornes.x1 - bornes.x0;
+      k = Math.max(innerWidth < 720 ? 0.8 : 0.3, Math.min(1, (r.width - 40) / lg));
+      tx = r.width / 2 - (k * lg <= r.width - 40 ? (bornes.x0 + bornes.x1) / 2 : positions[focus] ? positions[focus].cx : bornes.x1 - (r.width / 2 - 20) / k) * k; ty = r.height - 24 - bornes.y1 * k; appliquer(); return;
+    }
+    toutVoir(); if (mode === 'roue') return;
+    const mini = mode === 'frise' ? (innerWidth < 720 ? 0.5 : 0.42) : (innerWidth < 720 ? 0.62 : 0.45);
+    if (k < mini) centrerSur(mode === 'frise' ? focus : ego, mini);
+  }
   function zoomer(f, cx, cy) {
     const r = vue.getBoundingClientRect(); cx = cx ?? r.width / 2; cy = cy ?? r.height / 2;
-    const nk = Math.max(tout ? 0.05 : 0.25, Math.min(2, k * f)); tx = cx - (cx - tx) * nk / k; ty = cy - (cy - ty) * nk / k; k = nk; appliquer();
+    const nk = Math.max(kmin(), Math.min(2, k * f)); tx = cx - (cx - tx) * nk / k; ty = cy - (cy - ty) * nk / k; k = nk; appliquer();
   }
   const pts = new Map(); let depart = null, bouge = false, pince = null;
   vue.addEventListener('pointerdown', e => {
@@ -228,7 +478,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
     const r = vue.getBoundingClientRect();
     if (pts.size === 2 && pince) {
-      const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), nk = Math.max(tout ? 0.05 : 0.25, Math.min(2, pince.k * d / pince.d));
+      const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), nk = Math.max(kmin(), Math.min(2, pince.k * d / pince.d));
       const cx = pince.cx - r.left, cy = pince.cy - r.top; tx = cx - (cx - pince.tx) * nk / pince.k; ty = cy - (cy - pince.ty) * nk / pince.k; k = nk; bouge = true; appliquer(); return;
     }
     if (!depart) return;
@@ -244,21 +494,21 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (bouge) { bouge = false; return; }
     const li = e.target.closest('[data-lien]'); if (li) { ouvrirLien(li.dataset.lien); return; }
     const pl = e.target.closest('[data-plus]');
-    if (pl) { const id = pl.dataset.plus; const n = positions[id]; ouverts[id] = (n ? n.g : 0) + PLUS; dessiner(); centrerSur(id); return; }
+    if (pl) { const id = pl.dataset.plus; const n = positions[id]; transition(() => { ouverts[id] = (n ? n.g : 0) + PLUS; dessiner(); centrerSur(id); }); return; }
     const c = e.target.closest('.carte[data-id]'); if (c) ouvrirFiche(c.dataset.id);
   });
   vue.addEventListener('dblclick', e => { const c = e.target.closest('.carte[data-id]'); if (c) recentrer(c.dataset.id); });
   racineEl.querySelector('.zoom').addEventListener('click', e => {
     const a = e.target.closest('button')?.dataset.a;
     if (a === 'plus') zoomer(1.25); if (a === 'moins') zoomer(0.8);
-    if (a === 'moi') { focus = ego; ouverts = {}; dessiner(); premiereVue(); }
+    if (a === 'moi') transition(() => { focus = ego; ouverts = {}; dessiner(); premiereVue(); });
   });
   racineEl.querySelector('.ensemble').addEventListener('click', e => {
     const a = e.target.closest('button')?.dataset.a; const ens = racineEl.querySelector('.ensemble');
     if (a === 'menu') { const o = ens.classList.toggle('ouvert'); e.target.closest('button').setAttribute('aria-expanded', String(o)); return; }
     ens.classList.remove('ouvert'); racineEl.querySelector('.ens-menu')?.setAttribute('aria-expanded', 'false');
     if (a === 'tout') toutVoir(); if (a === 'imprimer') print(); if (a === 'actes') listeActes(); if (a === 'pepites') listePepites(); if (a === 'avalider') listeAValider();
-    if (a === 'entier') { tout = !tout; if (tout) focus = ego; e.target.closest('button').textContent = tout ? 'Revenir à la vue simple' : 'Ouvrir l’arbre en entier'; dessiner(); if (tout) toutVoir(); else premiereVue(); }
+    if (a === 'entier') { const b = e.target.closest('button'); transition(() => { tout = !tout; if (tout) focus = ego; b.textContent = tout ? 'Revenir à la vue simple' : 'Ouvrir l’arbre en entier'; dessiner(); if (tout) toutVoir(); else premiereVue(); }); }
   });
   const leg = racineEl.querySelector('.legende');
   const legBtn = leg.querySelector('button');
@@ -274,13 +524,13 @@ export function creerArbre(racineEl, data, opt = {}) {
     if (e.key === 'Escape') fermerFiche();
     if (e.key === '+' || e.key === '=') zoomer(1.25); if (e.key === '-') zoomer(0.8);
     if (e.key === '/') { e.preventDefault(); racineEl.querySelector('#cherche').focus(); }
-    if (e.key === 'm' || e.key === 'M') { focus = ego; dessiner(); centrerSur(ego); }
+    if (e.key === 'm' || e.key === 'M') transition(() => { focus = ego; dessiner(); centrerSur(ego); });
     const pas = {ArrowLeft: [80, 0], ArrowRight: [-80, 0], ArrowUp: [0, 80], ArrowDown: [0, -80]}[e.key];
     if (pas && !e.target.closest('.fiche')) { tx += pas[0]; ty += pas[1]; appliquer(); }
   });
 
   // ---------- recentrage et fil ----------
-  function recentrer(id) { focus = id; ouverts = {}; dessiner(); if (id === ego) premiereVue(); else centrerSur(id); }
+  function recentrer(id) { transition(() => { focus = id; ouverts = {}; dessiner(); if (id === ego) premiereVue(); else centrerSur(id); }); }
   function majFil() {
     if (focus === ego) { fil.hidden = true; return; }
     fil.hidden = false;

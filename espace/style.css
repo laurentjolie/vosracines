@@ -627,3 +627,61 @@ i.vs-a,path.vs-a{background:#8A3A17;fill:#8A3A17}
 .vs-jour.actif .vs-cible{fill:rgba(140,123,104,.10)}
 .vs-bulle{position:absolute;top:calc(100% + 4px);z-index:2;background:var(--paper,#FFFCF5);border:1px solid var(--line-strong);border-radius:8px;padding:6px 10px;font-size:13px;line-height:1.4;pointer-events:none;box-shadow:0 6px 18px -10px rgba(46,33,23,.5);white-space:nowrap}
 .vs-detail{margin-top:8px}.vs-detail summary{cursor:pointer;font-size:14px;color:var(--ink-soft)}
+
+/* 28/11/2026 (Laurent) : trois formes de l'arbre (arbre, roue, frise) et passage animé de l'une à l'autre */
+.modes{top:124px;left:12px;display:flex;gap:2px;padding:4px;border-radius:14px}
+.modes button{display:flex;align-items:center;gap:7px;min-height:44px;padding:0 14px;border:0;border-radius:10px;background:none;font:600 15px var(--f-ui);color:var(--ink-soft);cursor:pointer}
+.modes button svg{width:20px;height:20px;flex:none}
+.modes button:hover{color:var(--ink);background:var(--bg-2)}
+.modes button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}
+.fil{top:182px}
+@media (max-width:719px){.modes button{padding:0 12px}.modes button span{display:none}.fil{top:180px}}
+.carte{contain:layout style;background-size:100% 100%!important;background-repeat:no-repeat;transition:background-size .45s ease,background-color .45s ease,border-color .45s ease,box-shadow .45s ease}
+.carte::before{transition:opacity .45s ease}
+.carte.fantome{pointer-events:none}
+/* roue */
+.carte.r,.carte.r-attente{padding:2px 6px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.carte.r .nom,.carte.r-attente .nom{font-size:var(--fs);max-width:100%;line-height:1.2}
+.carte.r .dates,.carte.r-attente .dates{font-size:calc(var(--fs) * .86);max-width:100%}
+.carte.r .lieu,.carte.r .preuve,.carte.r-attente .lieu,.carte.r-attente .preuve{display:none}
+.carte.r.court .dates,.carte.r-attente.court .dates{display:none}
+.carte.r{background-color:transparent!important;background-size:100% 0!important;border-color:transparent;box-shadow:none}
+.carte.r::before{opacity:0}
+.carte.r:hover{border-color:var(--accent);background-color:rgba(255,252,245,.75)!important}
+.carte.r.choisie{border-color:var(--accent)}
+.carte.r.pepite{box-shadow:none}
+.carte.r .etoile,.carte.r-attente .etoile{top:-8px;left:50%;margin-left:-9px;width:18px;height:18px;font-size:11px;line-height:18px}
+.carte.vivant.r{border-color:transparent}
+.carte.centre .lieu{display:block}
+.roue-fond .sect{stroke:var(--paper);stroke-width:2}
+.roue-vides .vide{fill:none;stroke:var(--line-strong);stroke-width:1.2;stroke-dasharray:5 6;opacity:.55}
+.roue-centre{fill:var(--paper);stroke:var(--line);stroke-width:1.5}
+.roue-bord{fill:none;stroke:var(--line);stroke-width:1}
+/* frise */
+.carte.f{padding:0 10px 0 15px;display:flex;align-items:center;gap:8px}
+.carte.f .nom{font-size:var(--fs);flex:0 1 auto;min-width:0}
+.carte.f .dates{font-size:calc(var(--fs) * .9);flex:none}
+.carte.f .lieu,.carte.f .preuve{display:none}
+.carte.f.etroit .dates{display:none}
+.carte.f.estime{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 50px),rgba(0,0,0,.2));mask-image:linear-gradient(90deg,#000 calc(100% - 50px),rgba(0,0,0,.2))}
+.carte.f.ego::after{top:-12px;font-size:12px;padding:1px 8px}
+.carte.f .etoile{top:-9px;left:-7px;width:18px;height:18px;font-size:11px;line-height:18px}
+.scene svg text{font-family:var(--f-ui)}
+.frise-fond .bande{fill:var(--bg-2);opacity:.6}
+.frise-fond .nom-bande{fill:var(--ink-soft);font-size:16px;font-weight:600;text-anchor:end}
+.frise-fond .periode{fill:var(--accent-2);opacity:.13}
+.frise-fond .periode-t{fill:var(--ink-soft);font-size:13px;font-style:italic}
+.frise-fond .grille{stroke:var(--line);stroke-width:1;stroke-dasharray:2 6;fill:none}
+.frise-fond .grille.siecle{stroke:var(--line-strong);stroke-dasharray:none;opacity:.45}
+.frise-axe .axe-ligne{stroke:var(--ink-soft);stroke-width:2;fill:none}
+.frise-axe .tic{stroke:var(--ink-soft);stroke-width:1.2}
+.frise-axe .annee{fill:var(--ink-soft);font-size:14px;text-anchor:middle;font-variant-numeric:tabular-nums}
+.frise-axe .annee.siecle{fill:var(--ink);font-weight:700;font-size:16px}
+.frise-axe .ici{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:4 4;fill:none}
+.frise-axe .ici-t{fill:var(--accent);font-size:13px;font-weight:600;text-anchor:middle}
+.frise-liens path{fill:none;opacity:.7}
+.frise-note{position:absolute;margin:0;font-size:14px;color:var(--ink-soft);white-space:nowrap}
+.frise-vide{position:absolute;left:-170px;top:-20px;width:340px;margin:0;color:var(--ink-soft);text-align:center}
+@media print{.modes{display:none}}
+.legende .corps{max-height:calc(100dvh - 320px)}
+@media (max-width:719px){.legende .corps{max-height:calc(100dvh - 320px)}}
