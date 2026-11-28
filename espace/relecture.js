@@ -51,6 +51,8 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
       ${admin ? `<label class="rl-ouvrir"><input type="checkbox" ${meta.relecture ? 'checked' : ''}> Relecture ouverte au client</label>` : ''}</div>
     <div class="rl-etape-zone" aria-live="polite"></div>
     <div class="rl-corps">
+      <nav class="rl-nav" aria-label="Sommaire du livre"><button type="button" class="rl-nav-bt" aria-expanded="true" aria-controls="rl-nav-liste" title="Rentrer ou sortir le sommaire"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Sommaire</span></button>
+        <ol class="rl-nav-liste" id="rl-nav-liste"><li><button type="button" data-nav="1"><span class="t">Couverture</span><span class="n">1</span></button></li></ol></nav>
       <div class="rl-pages">${PL.map((pl, k) => `<section class="planche" data-pl="${k}" aria-label="${libPlanche(pl)}"><h2 class="rl-lib">${libPlanche(pl)}</h2><div class="pl-pages">${pl.map(n => n ? `<div class="pg" data-n="${n}" style="aspect-ratio:148/210"><span class="pg-num">${n}</span></div>` : '<div class="pg vide" aria-hidden="true"></div>').join('')}</div></section>`).join('')}</div>
       <aside class="rl-notes" aria-label="Commentaires">
         <h2 class="rl-ici"></h2>
@@ -71,9 +73,10 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   // ---------- pages, chargées à l'approche
   const charge = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { charge.unobserve(e.target); remplir(e.target); } }), {rootMargin: '1200px 0px'});
   el.querySelectorAll('.pg[data-n]').forEach(p => charge.observe(p));
+  const cachePages = new Map(), lirePage = n => { if (!cachePages.has(n)) cachePages.set(n, S.page(meta.id, n).catch(e => { cachePages.delete(n); throw e; })); return cachePages.get(n); };
   async function remplir(div) {
     const n = +div.dataset.n;
-    let p; try { p = await S.page(meta.id, n); } catch (e) { div.insertAdjacentHTML('beforeend', '<span class="petit pg-err">Page indisponible</span>'); return; }
+    let p; try { p = await lirePage(n); } catch (e) { div.insertAdjacentHTML('beforeend', '<span class="petit pg-err">Page indisponible</span>'); return; }
     if (!p) return;
     div.style.aspectRatio = `${p.w}/${p.h}`; div.querySelector('.pg-num')?.remove();
     const ratio = p.h / p.w;
@@ -86,6 +89,15 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   }
   // 28/11/2026 (Laurent) : le sommaire est cliquable. Sur la page qui porte le titre « Sommaire », chaque numéro de page et ce qui
   // est sur la même ligne (numéro de chapitre, titre, points de conduite) forment un lien vers cette page.
+  function entreesSommaire(p) {
+    const L = p.l || [];
+    return L.filter(l => /^\d{1,3}$/.test(String(l[5]).trim()) && +l[5] >= 1 && +l[5] <= N).map(l => {
+      const cy = l[1] + l[3] / 2, rang = L.filter(m => m !== l && Math.abs(m[1] + m[3] / 2 - cy) < Math.max(l[3], 0.008) * 0.7).sort((a, b) => a[0] - b[0]);
+      const num = rang.filter(m => /^[IVXLC]+$/.test(String(m[5]).trim())).map(m => String(m[5]).trim()).join(' ');
+      const titre = rang.filter(m => !/^[IVXLC]+$/.test(String(m[5]).trim())).map(m => String(m[5]).replace(/[ .\u202f\u2026]+$/, '').trim()).filter(Boolean).join(' ');
+      return {n: +l[5], num, titre};
+    }).filter(e => e.titre).sort((a, b) => a.n - b.n);
+  }
   function liensSommaire(p) {
     const L = p.l || []; if (!L.some(l => /^\s*sommaire\s*$/i.test(l[5]))) return '';
     return L.filter(l => /^\d{1,3}$/.test(String(l[5]).trim()) && +l[5] >= 1 && +l[5] <= N).map(l => {
@@ -114,7 +126,7 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   const suit = new IntersectionObserver(es => {
     es.forEach(e => vis.set(+e.target.dataset.pl, e.intersectionRatio));
     let best = courante, r = -1; vis.forEach((v, k) => { if (v > r) { r = v; best = k; } });
-    if (best !== courante) { courante = best; afficher(); memo(); }
+    if (best !== courante) { courante = best; afficher(); memo(); majNavIci(); }
   }, {threshold: [0, 0.25, 0.5, 0.75, 1]});
   if (opt.z && opt.z !== 1) zoomer(+opt.z);
   if (courante) el.querySelector(`.planche[data-pl="${courante}"]`)?.scrollIntoView({block: 'start'});
@@ -197,6 +209,38 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
     b.disabled = false;
   };
   function aller(n) { const pg = el.querySelector(`.pg[data-n="${n}"]`); if (pg) pg.closest('.planche').scrollIntoView({behavior: 'smooth', block: 'start'}); }
+
+  // ---------- 28/11/2026 (Laurent : « toujours accès au menu à gauche pour naviguer, qu'on peut sortir ou rentrer ») :
+  // le sommaire du livre (lu sur sa page « Sommaire ») reste à gauche ; le chapitre en cours est surligné.
+  const nav = el.querySelector('.rl-nav'), navBt = nav.querySelector('.rl-nav-bt'), navListe = nav.querySelector('.rl-nav-liste');
+  const etroit = () => innerWidth <= 900;
+  let navOuvert = !etroit(); try { const v = localStorage.getItem('vr-nav-livre'); if (v && !etroit()) navOuvert = v === '1'; } catch (e) {}
+  function majNavOuvert() { nav.classList.toggle('ferme', !navOuvert); navBt.setAttribute('aria-expanded', String(navOuvert)); el.querySelector('.rl-corps').classList.toggle('nav-ferme', !navOuvert); }
+  navBt.onclick = () => { navOuvert = !navOuvert; majNavOuvert(); if (!etroit()) try { localStorage.setItem('vr-nav-livre', navOuvert ? '1' : '0'); } catch (e) {} };
+  nav.addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (!b) return; aller(+b.dataset.nav); if (etroit()) { navOuvert = false; majNavOuvert(); } });
+  majNavOuvert();
+  let entreesNav = [];
+  function majNavIci() {
+    const ps = pagesDe(courante), haut = Math.max(...ps);
+    let ici = null; entreesNav.forEach(x => { if (x.n <= haut) ici = x.n; });
+    navListe.querySelectorAll('[data-nav]').forEach(b => { const on = +b.dataset.nav === ici; b.classList.toggle('ici', on); if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
+  }
+  (async () => {
+    let somm = 0, entrees = [];
+    for (let n = 2; n <= Math.min(N, 14) && !entrees.length; n++) {
+      const p = await lirePage(n).catch(() => null); if (!p) continue;
+      if ((p.l || []).some(l => /^\s*sommaire\s*$/i.test(l[5]))) {
+        somm = n; entrees = entreesSommaire(p);
+        const suite = n < N ? await lirePage(n + 1).catch(() => null) : null;   // un sommaire sur deux pages
+        if (suite && !(suite.l || []).some(l => /^\s*sommaire\s*$/i.test(l[5]))) { const e2 = entreesSommaire(suite); if (e2.length >= 3) entrees = entrees.concat(e2); }
+      }
+    }
+    if (!entrees.length) for (let n = 10; n < N; n += 10) entrees.push({n, num: '', titre: 'Page ' + n});   // livre sans sommaire lisible
+    entreesNav = [{n: 1, num: '', titre: 'Couverture'}, ...(somm ? [{n: somm, num: '', titre: 'Sommaire'}] : []), ...entrees.filter(x => x.n > (somm || 1)), ...(N > 1 ? [{n: N, num: '', titre: 'Dernière page'}] : [])];
+    entreesNav = entreesNav.filter((x, i, a) => a.findIndex(y => y.n === x.n && y.titre === x.titre) === i);
+    navListe.innerHTML = entreesNav.map(x => `<li><button type="button" data-nav="${x.n}">${x.num ? `<span class="num">${esc(x.num)}</span>` : ''}<span class="t">${esc(x.titre)}</span><span class="n">${x.n}</span></button></li>`).join('');
+    majNavIci();
+  })();
 
   // ---------- mobile : le panneau des commentaires s'ouvre par-dessus
   const mob = el.querySelector('.rl-mobile');

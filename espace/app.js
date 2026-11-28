@@ -317,8 +317,18 @@ let U = null, vuComme = null, arbreActif = null;
 // Chaque page s'inscrit dans l'historique ; popstate la reconstruit.
 let restauration = false, cleCourante = null;
 const cleEtat = st => st && st.p ? [st.p, st.id || '', st.v || '', st.o || '', st.vc || ''].join('|') : null;
+// 28/11/2026 (Laurent : « passer facilement de l'arbre à la relecture du livre, et inversement ») : en quittant l'un pour
+// l'autre, on retrouve l'arbre dans la même forme (roue, frise…) et le livre à la même double page.
+const memArbre = {}, memLivre = {};
+function retenir() {
+  const st = history.state || {};
+  if (st.p === 'arbre' && st.ar) memArbre[st.id + '|' + st.v] = st.ar;
+  if (st.p === 'relire' && st.pl != null) memLivre[st.id] = {planche: st.pl, z: st.z};
+}
 function marquer(etat) {
   etat = {...etat, vc: vuComme || ''};
+  if (!restauration) retenir();
+  if (!restauration && etat.p === 'arbre' && memArbre[etat.id + '|' + etat.v]) etat.ar = memArbre[etat.id + '|' + etat.v];
   const k = cleEtat(etat);
   if (restauration) { cleCourante = k; return; }
   if (k === cleCourante) return;
@@ -350,9 +360,11 @@ async function restaurer(st) {
     }
   } catch (x) { console.error(x); restauration = false; return accueil(); } finally { restauration = false; }
 }
-function barre(titre = '', selecteur = '') {
+const ICONE_LIVRE = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.6 3.5 5v13c3.5-.4 6.5 0 8.5 1.5 2-1.5 5-1.9 8.5-1.5V5C17 4.6 14 5 12 6.5z"/><path d="M12 6.5v13"/></svg>';
+const ICONE_ARBRE = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="15" width="6" height="5" rx="1"/><rect x="3" y="4" width="6" height="5" rx="1"/><rect x="15" y="4" width="6" height="5" rx="1"/><path d="M6 9v2.5h12V9M12 11.5V15"/></svg>';
+function barre(titre = '', selecteur = '', bascule = '') {
   const prenom = U.prenom || '';
-  return `<header class="barre">${LOGO}<div class="titre-livre">${esc(titre)}</div>${selecteur}
+  return `<header class="barre">${LOGO}<div class="titre-livre">${esc(titre)}</div>${selecteur}${bascule}
     <div class="menu-compte"><button aria-expanded="false" aria-haspopup="true">${prenom ? 'Bonjour ' + esc(prenom) : 'Mon compte'} ▾</button>
     <ul hidden>
       <li><button data-m="livres">${U.admin ? 'Tous les arbres' : 'Vos livres'}</button></li>
@@ -463,12 +475,15 @@ Ambiance : ${esc(c.ambiance)}` : ''}${c.creuser ? `
   }
   ouvrirOrientation(document.getElementById('orientation'), meta, S, U, {admin, feuilleter: meta.livre ? () => relecture(meta, admin) : null});
 }
-async function relecture(meta, admin, pos = {}) {
+async function relecture(meta, admin, pos = null) {
   marquer({p: 'relire', id: meta.id, adm: !!admin});
+  pos = pos || memLivre[meta.id] || {};
   arbreActif = {id: meta.id, version: 'relecture'};
   document.title = `Relire ${meta.titre} · Vos Racines`;
-  $app.innerHTML = barre(meta.titre) + '<div id="relecture"></div>';
+  const vArbre = admin && U.admin && !vuComme ? 'admin' : 'client';
+  $app.innerHTML = barre(meta.titre, '', `<button class="btn bascule" data-bascule title="Voir l’arbre généalogique">${ICONE_ARBRE}<span>L’arbre généalogique</span></button>`) + '<div id="relecture"></div>';
   brancherBarre();
+  $app.querySelector('[data-bascule]').onclick = () => ouvrirArbre(meta.id, vArbre);
   ouvrirRelecture(document.getElementById('relecture'), meta, S, U, {admin, ...pos});
 }
 const dateFr = d => { if (!d) return ''; const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('fr-FR', {day: 'numeric', month: 'long', year: 'numeric'}); };
@@ -485,8 +500,14 @@ async function ouvrirArbre(id, version) {
     const tous = await S.tousArbres();
     sel = `<label class="cache-visuel" for="choix-arbre">Choisir un arbre</label><select id="choix-arbre">${tous.map(a => ['admin', 'client'].map(v => `<option value="${esc(a.id)}" data-v="${v}" ${a.id === id && v === version ? 'selected' : ''}>${esc(a.titre)}${v === 'client' ? ' (vue client)' : ''}</option>`).join('')).join('')}</select>`;
   }
-  $app.innerHTML = barre(d.titre, sel) + '<div id="arbre"></div>';
+  const m = await S.meta(id).catch(() => null), livreOk = m && m.livre && (m.relecture || U.admin);
+  const libLivre = m && m.livre && m.livre.etape === 'premier_jet' ? 'Feuilleter le livre' : 'Relire le livre';
+  $app.innerHTML = barre(d.titre, sel, livreOk ? `<button class="btn bascule" data-bascule title="${libLivre}">${ICONE_LIVRE}<span>${libLivre}</span></button>` : '') + '<div id="arbre"></div>';
   brancherBarre();
+  if (livreOk) $app.querySelector('[data-bascule]').onclick = async () => {
+    if (m.livre.etape === 'bat' && !('validation' in m)) m.validation = await S.validation(id).catch(() => null);
+    relecture(m, U.admin && !vuComme);
+  };
   creerArbre(document.getElementById('arbre'), d, {admin: U.admin && version === 'admin', image: nom => S.image(id, nom)});
 }
 

@@ -266,7 +266,8 @@ details.niveaux li{margin:6px 0}
 .rl-tete h1{font-size:22px;margin:0}
 .rl-aide{margin:0;max-width:560px;font-size:15px;color:var(--ink-soft)}
 .rl-ouvrir{font-weight:600;display:flex;gap:8px;align-items:center}
-.rl-corps{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 380px;min-height:0}
+.rl-corps{flex:1;display:grid;grid-template-columns:260px minmax(0,1fr) 380px;min-height:0;transition:grid-template-columns .25s}
+.rl-corps.nav-ferme{grid-template-columns:52px minmax(0,1fr) 380px}
 .rl-pages{overflow-y:auto;padding:20px 24px 80px;background:var(--bg-2)}
 .planche{max-width:1100px;margin:0 auto 34px}
 .rl-lib{font:600 14px var(--f-ui);color:var(--ink-soft);margin:0 0 8px;text-transform:uppercase;letter-spacing:.06em}
@@ -729,3 +730,30 @@ i.vs-a,path.vs-a{background:#8A3A17;fill:#8A3A17}
 /* 28/11/2026 : sommaire cliquable dans la relecture */
 .pg-lien{position:absolute;background:transparent;border:0;border-radius:4px;padding:0;cursor:pointer;z-index:2}
 .pg-lien:hover,.pg-lien:focus-visible{background:rgba(168,68,30,.10);outline:1px solid rgba(168,68,30,.45)}
+
+/* 28/11/2026 : passage direct entre l'arbre généalogique et le livre */
+.barre .bascule{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;white-space:nowrap}
+.barre .bascule svg{flex:none}
+@media (max-width:719px){.barre .bascule span{display:none}.barre .bascule{padding:0 10px}}
+
+/* 28/11/2026 : sommaire du livre à gauche, qu'on sort ou qu'on rentre */
+.rl-nav{border-right:1px solid var(--line);background:var(--paper);overflow-y:auto;overflow-x:hidden;min-width:0;display:flex;flex-direction:column}
+.rl-nav-bt{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;border:0;border-bottom:1px solid var(--line);background:none;font:600 15px var(--f-ui);color:var(--ink);cursor:pointer;text-align:left;position:sticky;top:0;background:var(--paper);z-index:1}
+.rl-nav-bt svg{flex:none}
+.rl-nav-liste{list-style:none;margin:0;padding:6px 0 24px}
+.rl-nav-liste button{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:baseline;width:100%;min-height:40px;padding:6px 14px;border:0;border-left:3px solid transparent;background:none;font:15px/1.3 var(--f-ui);color:var(--ink);text-align:left;cursor:pointer}
+.rl-nav-liste button:hover{background:var(--bg-2)}
+.rl-nav-liste button.ici{border-left-color:var(--accent);background:var(--band);font-weight:600}
+.rl-nav-liste .num{color:var(--ink-2,#6b6257);font-size:13px;min-width:2.2em}
+.rl-nav-liste .t{grid-column:2}
+.rl-nav-liste .n{color:var(--ink-2,#6b6257);font-size:13px;font-variant-numeric:tabular-nums}
+.rl-nav.ferme .rl-nav-bt span,.rl-nav.ferme .rl-nav-liste{display:none}
+.rl-nav.ferme .rl-nav-bt{padding:0;justify-content:center}
+@media (max-width:900px){
+  .rl-corps,.rl-corps.nav-ferme{grid-template-columns:1fr}
+  .rl-nav{position:fixed;top:56px;left:0;bottom:0;width:min(320px,86vw);z-index:45;box-shadow:8px 0 30px rgba(0,0,0,.15);transition:transform .25s}
+  .rl-nav.ferme{transform:translateX(calc(-100% + 0px));box-shadow:none;overflow:visible}
+  .rl-nav.ferme .rl-nav-bt{position:fixed;left:8px;bottom:16px;top:auto;width:auto;padding:0 14px;border:1.5px solid var(--line-strong);border-radius:10px;box-shadow:var(--shadow);transform:translateX(calc(min(320px,86vw)))}
+  .rl-nav.ferme .rl-nav-bt span{display:inline}
+}
+@media (max-width:900px){.rl-mobile{left:auto;right:12px;transform:none}.rl-nav.ferme .rl-nav-bt{bottom:16px}}

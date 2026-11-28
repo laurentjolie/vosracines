@@ -604,7 +604,23 @@ export function creerArbre(racineEl, data, opt = {}) {
   majModes();
   modesEl.addEventListener('click', e => {
     const b = e.target.closest('[data-mode]'); if (!b || b.dataset.mode === mode) return;
-    transition(() => { mode = b.dataset.mode; try { localStorage.setItem('vr-mode', mode); } catch (x) {} majModes(); dessiner(); premiereVue(); });
+    // 28/11/2026 (Laurent, 2e demande) : entre arbre et roue, la personne au centre ne bouge pas du tout à l'écran :
+    // le cadrage final garde son point d'écran (seule l'échelle change ensuite, autour d'elle).
+    const fixe = ['arbre', 'roue'].includes(mode) && ['arbre', 'roue'].includes(b.dataset.mode), n0 = positions[focus];
+    const ecran = fixe && n0 ? [n0.cx * k + tx, (n0.cy ?? (n0.y + H() / 2)) * k + ty] : null;
+    transition(() => {
+      mode = b.dataset.mode; try { localStorage.setItem('vr-mode', mode); } catch (x) {} majModes(); dessiner(); premiereVue();
+      const n1 = positions[focus];
+      if (ecran && n1) {
+        const fy = n1.cy ?? (n1.y + H() / 2);
+        if (mode === 'roue') {   // la roue entière tient autour de la personne restée en place (au besoin un peu plus petite)
+          const r = vue.getBoundingClientRect(), R = Math.max(1, ...Object.values(positions).map(n => Math.hypot(n.cx - n1.cx, (n.cy ?? (n.y + H() / 2)) - fy) + 40));
+          const place = Math.min(ecran[0], r.width - ecran[0], ecran[1] - 100, r.height - ecran[1]) - 12;
+          if (place > 0) k = Math.max(kmin(), k * 0.55, Math.min(k, place / R));
+        }
+        tx = ecran[0] - n1.cx * k; ty = ecran[1] - fy * k; appliquer();
+      }
+    });
   });
   function colLien(n) {
     const l = lignee(P[n.id]);
