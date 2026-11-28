@@ -329,6 +329,11 @@ addEventListener('popstate', async e => {
   const st = e.state || {};
   if (cleEtat(st) === cleCourante) { const f = document.querySelector('.fiche:not([hidden]) .fermer'); if (f && !st.fiche) f.click(); return; }
   if (!st.p || !U || restauration) return;
+  await restaurer(st);
+});
+// 28/11/2026 (Laurent : « quand je rafraîchis la page, je reviens au début de mon interface administrateur ») : l'état de la page
+// (history.state) survit au rechargement ; au démarrage on rouvre la même page, et en relecture la même double page.
+async function restaurer(st) {
   restauration = true;
   try {
     vuComme = st.vc || null;
@@ -336,14 +341,15 @@ addEventListener('popstate', async e => {
     else if (st.p === 'accueil') { arbreActif = null; await accueil(); }
     else if (st.p === 'arbre') await ouvrirArbre(st.id, st.v);
     else {
-      const m = await S.meta(st.id); if (!m) return accueil();
+      const m = await S.meta(st.id); if (!m) { restauration = false; return accueil(); }
       if (m.livre && m.livre.etape === 'bat') m.validation = await S.validation(st.id).catch(() => null);
-      if (st.p === 'relire') await relecture(m, !!st.adm);
+      if (st.p === 'relire') await relecture(m, !!st.adm, {planche: st.pl, z: st.z});
       else if (st.p === 'orienter') await orientation(m, !!st.adm);
       else if (st.p === 'partage') await pagePartage(m);
+      else { restauration = false; return accueil(); }
     }
-  } catch (x) { console.error(x); } finally { restauration = false; }
-});
+  } catch (x) { console.error(x); restauration = false; return accueil(); } finally { restauration = false; }
+}
 function barre(titre = '', selecteur = '') {
   const prenom = U.prenom || '';
   return `<header class="barre">${LOGO}<div class="titre-livre">${esc(titre)}</div>${selecteur}
@@ -457,13 +463,13 @@ Ambiance : ${esc(c.ambiance)}` : ''}${c.creuser ? `
   }
   ouvrirOrientation(document.getElementById('orientation'), meta, S, U, {admin, feuilleter: meta.livre ? () => relecture(meta, admin) : null});
 }
-async function relecture(meta, admin) {
+async function relecture(meta, admin, pos = {}) {
   marquer({p: 'relire', id: meta.id, adm: !!admin});
   arbreActif = {id: meta.id, version: 'relecture'};
   document.title = `Relire ${meta.titre} · Vos Racines`;
   $app.innerHTML = barre(meta.titre) + '<div id="relecture"></div>';
   brancherBarre();
-  ouvrirRelecture(document.getElementById('relecture'), meta, S, U, {admin});
+  ouvrirRelecture(document.getElementById('relecture'), meta, S, U, {admin, ...pos});
 }
 const dateFr = d => { if (!d) return ''; const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('fr-FR', {day: 'numeric', month: 'long', year: 'numeric'}); };
 
@@ -738,6 +744,7 @@ async function pageAdmin(onglet) {
     U = u;
     if (u && u.admin) ecrire('vr-admin', '1');   // 18/11/2026 : les visites de l'administrateur ne sont pas comptées
     if (!u) { if (!S.estLien()) (location.hash === '#inscription' ? ecranInscription() : ecranConnexion()); return; }
-    if (premier || !arbreActif) { premier = false; accueil(); }
+    if (premier) { premier = false; const st = history.state; if (st && st.p && st.p !== 'accueil' && !S.estLien()) restaurer(st); else accueil(); }
+    else if (!arbreActif) accueil();
   });
 })();

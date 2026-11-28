@@ -37,7 +37,10 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   const N = (meta.livre || {}).pages || 0, PL = planches(N);
   const admin = !!opt.admin;
   const L = meta.livre || {}, etape = L.etape || '';
-  let retours = [], courante = 0, ref = null;
+  let retours = [], courante = Math.min(Math.max(0, opt.planche | 0), PL.length - 1), ref = null;
+  // 28/11/2026 (Laurent) : la double page, le zoom et le commentaire en cours survivent au rafraîchissement de la page.
+  const memo = () => { const st = history.state || {}; if (!el.isConnected || st.p !== 'relire' || st.id !== meta.id) return; try { history.replaceState({...(history.state || {}), pl: courante, z}, ''); } catch (e) {} };
+  const CLE_BROUILLON = 'vr-brouillon-' + meta.id;
   let validation = 'validation' in meta ? meta.validation : undefined;   // undefined : pas encore lue
   const verrou = () => !admin && !!validation;   // livre validé : plus de commentaire du client
   const titreEtape = etape === 'bat' ? 'Relire le bon à tirer' : etape === 'premier_jet' ? 'Feuilleter le premier jet' : 'Relire le livre';
@@ -99,7 +102,7 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
     nz = Math.max(0.5, Math.min(3, Math.round(nz * 4) / 4)); if (nz === z) return;
     const r = pagesEl.getBoundingClientRect(), fx = (pagesEl.scrollLeft + (cx ?? r.width / 2)) / pagesEl.scrollWidth, fy = (pagesEl.scrollTop + r.height / 2) / pagesEl.scrollHeight;
     z = nz; pagesEl.style.setProperty('--z', z); el.querySelector('.rl-z').textContent = Math.round(z * 100) + ' %';
-    pagesEl.classList.toggle('zoome', z > 1);
+    pagesEl.classList.toggle('zoome', z > 1); memo();
     pagesEl.scrollLeft = fx * pagesEl.scrollWidth - (cx ?? r.width / 2); pagesEl.scrollTop = fy * pagesEl.scrollHeight - r.height / 2;
   }
   el.querySelector('.rl-zoom').addEventListener('click', e => { const b = e.target.closest('[data-z]'); if (!b) return; zoomer(b.dataset.z === '+' ? z + 0.25 : b.dataset.z === '-' ? z - 0.25 : 1); });
@@ -111,8 +114,10 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   const suit = new IntersectionObserver(es => {
     es.forEach(e => vis.set(+e.target.dataset.pl, e.intersectionRatio));
     let best = courante, r = -1; vis.forEach((v, k) => { if (v > r) { r = v; best = k; } });
-    if (best !== courante) { courante = best; afficher(); }
+    if (best !== courante) { courante = best; afficher(); memo(); }
   }, {threshold: [0, 0.25, 0.5, 0.75, 1]});
+  if (opt.z && opt.z !== 1) zoomer(+opt.z);
+  if (courante) el.querySelector(`.planche[data-pl="${courante}"]`)?.scrollIntoView({block: 'start'});
   el.querySelectorAll('.planche').forEach(s => suit.observe(s));
 
   // ---------- références : passage sélectionné ou image
@@ -179,13 +184,15 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
   });
   function confirmer(b) { if (b.dataset.ok) return true; b.dataset.ok = 1; b.textContent = 'Confirmer la suppression'; return false; }
   tous.onchange = afficher;
+  try { const b = sessionStorage.getItem(CLE_BROUILLON); if (b && !txt.value) txt.value = b; } catch (e) {}
+  txt.addEventListener('input', () => { try { txt.value.trim() ? sessionStorage.setItem(CLE_BROUILLON, txt.value) : sessionStorage.removeItem(CLE_BROUILLON); } catch (e) {} });
   form.onsubmit = async e => {
     e.preventDefault();
     const t = txt.value.trim(); if (!t) { txt.focus(); return; }
     const genre = (form.querySelector('input[name=genre]:checked') || {}).value || 'correction';
     const r = {page: ref ? ref.page : pagesDe(courante)[0], ref: ref && ref.ref || '', citation: ref && ref.citation ? ref.citation.slice(0, 1000) : '', texte: t, genre};
     const b = form.querySelector('button[type=submit]'); b.disabled = true;
-    try { const id = await S.ajouterRetour(meta.id, r); retours.push({...r, id, auteur: U.email, cree: new Date().toISOString(), statut: 'ouvert'}); txt.value = ''; poserRef(null); form.querySelector('.note-ok').textContent = 'Merci, c’est noté.'; setTimeout(() => form.querySelector('.note-ok').textContent = '', 2500); afficher(); }
+    try { const id = await S.ajouterRetour(meta.id, r); retours.push({...r, id, auteur: U.email, cree: new Date().toISOString(), statut: 'ouvert'}); txt.value = ''; try { sessionStorage.removeItem(CLE_BROUILLON); } catch (e) {} poserRef(null); form.querySelector('.note-ok').textContent = 'Merci, c’est noté.'; setTimeout(() => form.querySelector('.note-ok').textContent = '', 2500); afficher(); }
     catch (err) { console.error(err); form.querySelector('.note-ok').textContent = 'L’envoi n’a pas marché. Réessayez dans un instant.'; }
     b.disabled = false;
   };
