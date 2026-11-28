@@ -78,7 +78,19 @@ export function ouvrirRelecture(el, meta, S, U, opt = {}) {
       const fs = sz * ratio * 100;   // en cqw (pourcentage de la largeur de la page)
       ctx.font = `${fs * 10}px ${FONTE}`; const mes = ctx.measureText(t).width || 1, sx = (w * 1000) / mes;
       return `<span style="left:${x * 100}%;top:${y * 100}%;font-size:${fs}cqw;transform:scaleX(${sx.toFixed(3)})">${esc(t)}</span>`;
-    }).join(' ')}</div>${(p.im || []).map(([x, y, w, h, nom]) => `<button class="pg-img" data-img="${esc(nom)}" style="left:${x * 100}%;top:${y * 100}%;width:${w * 100}%;height:${h * 100}%" aria-label="Image ${esc(nom)} : la commenter"><span>Image ${esc(nom)}</span></button>`).join('')}`);
+    }).join(' ')}</div>${(p.im || []).map(([x, y, w, h, nom]) => `<button class="pg-img" data-img="${esc(nom)}" style="left:${x * 100}%;top:${y * 100}%;width:${w * 100}%;height:${h * 100}%" aria-label="Image ${esc(nom)} : la commenter"><span>Image ${esc(nom)}</span></button>`).join('')}${liensSommaire(p)}`);
+    div.querySelectorAll('[data-sommaire]').forEach(b => b.onclick = e => { e.stopPropagation(); aller(+b.dataset.sommaire); });
+  }
+  // 28/11/2026 (Laurent) : le sommaire est cliquable. Sur la page qui porte le titre « Sommaire », chaque numéro de page et ce qui
+  // est sur la même ligne (numéro de chapitre, titre, points de conduite) forment un lien vers cette page.
+  function liensSommaire(p) {
+    const L = p.l || []; if (!L.some(l => /^\s*sommaire\s*$/i.test(l[5]))) return '';
+    return L.filter(l => /^\d{1,3}$/.test(String(l[5]).trim()) && +l[5] >= 1 && +l[5] <= N).map(l => {
+      const cy = l[1] + l[3] / 2, rang = L.filter(m => Math.abs(m[1] + m[3] / 2 - cy) < Math.max(l[3], 0.008) * 0.7);
+      const x0 = Math.min(...rang.map(m => m[0])), x1 = Math.max(...rang.map(m => m[0] + m[2])), y0 = Math.min(...rang.map(m => m[1])), y1 = Math.max(...rang.map(m => m[1] + m[3]));
+      const titre = rang.filter(m => m !== l && !/^[IVXLC]+$/.test(String(m[5]).trim())).map(m => String(m[5]).replace(/[ .\u202f]+$/, '')).join(' ');
+      return `<button class="pg-lien" data-sommaire="${+l[5]}" style="left:${(x0 * 100 - 0.6).toFixed(2)}%;top:${(y0 * 100 - 0.3).toFixed(2)}%;width:${((x1 - x0) * 100 + 1.2).toFixed(2)}%;height:${((y1 - y0) * 100 + 0.6).toFixed(2)}%" aria-label="Aller à la page ${+l[5]}${titre ? ' : ' + esc(titre) : ''}" title="Aller à la page ${+l[5]}"></button>`;
+    }).join('');
   }
 
   // ---------- zoom (01/11, Laurent) : boutons, Ctrl ou ⌘ + molette, touches + et - ; le texte sélectionnable suit (unités cqw)

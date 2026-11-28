@@ -6,10 +6,11 @@ const PROF = () => (innerWidth < 720 ? 2 : 3);
 // 28/11/2026 (Laurent) : trois formes de l'arbre (arbre, roue, frise) et un passage animé de l'une à l'autre
 try { CSS.registerProperty({name: '--fs', syntax: '<length>', inherits: true, initialValue: '16px'}); } catch (e) {}
 const NS = 'http://www.w3.org/2000/svg';
-const MODES = {arbre: 'Arbre', roue: 'Roue', frise: 'Frise'};
+const MODES = {arbre: 'Arbre', roue: 'Roue', frise: 'Frise', carte: 'Carte'};
 const ICONES = {
   arbre: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="8.5" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v3.5h11V8M12 11.5V16"/></svg>',
   roue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M3 12h5.5M15.5 12H21M12 3v5.5M12 15.5V21"/></svg>',
+  carte: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
   frise: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 20h18M6 20v-2M12 20v-2M18 20v-2"/><rect x="3" y="11" width="10" height="4" rx="1"/><rect x="9" y="4" width="12" height="4" rx="1"/></svg>'};
 const PERIODES = [[1789, 1799, 'Révolution'], [1803, 1815, 'Guerres napoléoniennes'], [1870, 1871, 'Guerre de 1870'], [1914, 1918, 'Première Guerre mondiale'], [1939, 1945, 'Seconde Guerre mondiale']];
 const rad = a => a * Math.PI / 180;
@@ -88,7 +89,7 @@ export function creerArbre(racineEl, data, opt = {}) {
   const egoNom = (P[ego] && (P[ego].u || P[ego].p) || '').split(' ')[0];
   let focus = ego, ouverts = {}, choisi = null, k = 1, tx = 0, ty = 0, positions = {}, tout = false;
   let mode = (() => { try { const m = localStorage.getItem('vr-mode'); return MODES[m] ? m : 'arbre'; } catch (e) { return 'arbre'; } })();
-  let vusCles = {}, bornes = null, secteurs = [], rafDecor = 0, enCours = [];
+  let vusCles = {}, bornes = null, secteurs = [], rafDecor = 0, enCours = [], friseInfo = null;
 
   racineEl.innerHTML = `
   <div class="vue" tabindex="-1"><div class="scene"><svg></svg><div class="cartes"></div></div></div>
@@ -99,6 +100,8 @@ export function creerArbre(racineEl, data, opt = {}) {
     <ul class="suggestions" id="sugg" role="listbox" hidden></ul>
   </div>
   <div class="fil" hidden></div>
+  <div class="axe-collant" hidden aria-hidden="true"></div>
+  <div class="flottant periode" hidden><button class="p-ouvrir" data-p="ouvrir">Qui vivait en… ?</button><span class="p-corps" hidden><label for="p-an">Qui vivait en</label> <input id="p-an" type="number" inputmode="numeric"> <input class="p-curseur" type="range" aria-label="Année"> <button data-p="liste">Voir la liste</button> <button data-p="fermer" aria-label="Fermer">✕</button></span></div>
   <div class="flottant modes" role="group" aria-label="Forme de l’arbre">${Object.entries(MODES).map(([m, lib]) => `<button data-mode="${m}" aria-pressed="false" title="Voir sous forme de ${lib.toLowerCase()}">${ICONES[m]}<span>${lib}</span></button>`).join('')}</div>
   <div class="flottant ensemble"><button class="ens-menu" data-a="menu" aria-expanded="false">Plus ▾</button><button data-a="entier">Ouvrir l’arbre en entier</button>${Object.values(P).filter(p => p.pep && !p.cache).length ? `<button data-a="pepites">✦ Les personnes bien documentées (${Object.values(P).filter(p => p.pep && !p.cache).length})</button>` : ''}${(data.actes || []).length ? `<button data-a="actes">Les actes du livre (${data.actes.length})</button>` : ''}${AV.length ? `<button data-a="avalider">Recherches à valider (${AV.length})</button>` : ''}<button data-a="tout">Vue d’ensemble</button><button data-a="imprimer">Imprimer cette vue</button></div>
   <div class="acte-vue" hidden role="dialog" aria-modal="true" aria-label="Acte"></div>
@@ -217,9 +220,9 @@ export function creerArbre(racineEl, data, opt = {}) {
   const cle = id => { const n = (vusCles[id] = (vusCles[id] || 0) + 1); return n === 1 ? id : `${id}~${n}`; };
   const kmin = () => ((tout || mode !== 'arbre') ? 0.05 : 0.25);
   function dessiner() {
-    finirDecor(); vusCles = {}; bornes = null; positions = {}; secteurs = [];
+    finirDecor(); vusCles = {}; bornes = null; positions = {}; secteurs = []; friseInfo = null; if (typeof majPeriode === 'function' && mode !== 'frise') perEl.hidden = true;
     vue.dataset.mode = mode;
-    if (mode === 'roue') dessinerRoue(); else if (mode === 'frise') dessinerFrise(); else dessinerArbre();
+    if (mode === 'roue') dessinerRoue(); else if (mode === 'frise') dessinerFrise(); else if (mode === 'carte') dessinerCarte(); else dessinerArbre();
     majFil();
   }
   function dessinerRoue() {
@@ -264,22 +267,23 @@ export function creerArbre(racineEl, data, opt = {}) {
     }
     for (const it of liste) {   // les enfants passent avant leurs parents : une naissance inconnue s'estime d'après l'enfant
       const p = P[it.id]; if (p.cache) continue;
-      let b = +an(p.na) || +an(p.ba) || 0, e = +an(p.de) || 0, est = false;
-      if (!b && e) { b = e - 60; est = true; }
-      if (!b && it.enf && it.enf.b) { b = it.enf.b - 30; est = true; }
+      let b = +an(p.na) || +an(p.ba) || 0, e = +an(p.de) || 0, est = false, estB = !b;
+      if (!b && e) b = e - 60;
+      if (!b && it.enf && it.enf.b) b = it.enf.b - 30;
       if (!b) continue;
-      if (!e) { if (p.v) e = ici; else { e = b + 62; est = true; } }
-      Object.assign(it, {b, e: Math.max(e, b + 1), est, ok: true});
+      // 28/11/2026 (Laurent) : une personne sans décès connu et qui peut être en vie va jusqu'à aujourd'hui ; rien au-delà d'aujourd'hui
+      if (!e) { if (p.v || b > ici - 105) e = ici; else { e = b + 62; est = true; } }
+      Object.assign(it, {b, e: Math.max(Math.min(e, ici), b + 1), est, estB, ok: true});
     }
     for (const it of [...liste].reverse()) {   // sans aucune date (souvent un vivant) : d'après ses parents
       const p = P[it.id]; if (it.ok || p.cache) continue;
       const pa = liste.filter(z => z.enf === it && z.ok); if (!pa.length) continue;
       const b = Math.max(...pa.map(z => z.b)) + 28;
-      Object.assign(it, {b, e: p.v ? Math.max(ici, b + 1) : b + 62, est: true, ok: true});
+      Object.assign(it, {b, e: Math.max(b + 1, (p.v || b > ici - 105) ? ici : Math.min(ici, b + 62)), est: !(p.v || b > ici - 105), estB: true, ok: true});
     }
     const vis = liste.filter(i => i.ok), sans = liste.filter(i => !i.ok && !P[i.id].cache).length;
     if (!vis.length) { svg.innerHTML = ''; cartesEl.innerHTML = '<p class="frise-vide">Aucune date connue pour placer ces personnes sur une frise.</p>'; return; }
-    const debut = Math.floor((Math.min(...vis.map(i => i.b)) - 8) / 10) * 10, finA = Math.ceil((Math.max(...vis.map(i => i.e)) + 4) / 10) * 10, X = a => (a - debut) * PX;
+    const debut = Math.floor((Math.min(...vis.map(i => i.b)) - 8) / 10) * 10, finA = Math.min(ici, Math.ceil((Math.max(...vis.map(i => i.e)) + 4) / 10) * 10), X = a => (a - debut) * PX;
     const parG = {}; vis.forEach(i => (parG[i.g] = parG[i.g] || []).push(i));
     let base = 0; const bandes = [];
     Object.keys(parG).map(Number).sort((a, b) => a - b).forEach(g => {
@@ -316,13 +320,151 @@ export function creerArbre(racineEl, data, opt = {}) {
       liens += `<path d="${d}" stroke="${col}" stroke-width="${Ln.w * 0.8}" ${Ln.d ? `stroke-dasharray="${Ln.d}"` : ''}/><circle cx="${xp}" cy="${i.y + HC}" r="3.2" fill="${col}"/>`;
     });
     vis.forEach(i => {
-      html += carteHTML(i.id, i.x, i.y, 'f' + (i.est ? ' estime' : '') + (i.w < 190 ? ' etroit' : ''), {g: i.g, w: i.w, h: HC, fs: 14}, cle(i.id));
+      html += carteHTML(i.id, i.x, i.y, 'f' + (i.est ? ' estime' : '') + (i.estB ? ' estime-debut' : '') + (i.w < 190 ? ' etroit' : ''), {g: i.g, w: i.w, h: HC, fs: 14}, cle(i.id));
       if (!positions[i.id]) positions[i.id] = {x: i.x, y: i.y, w: i.w, h: HC, cx: i.x + i.w / 2, cy: i.y + HC / 2};
     });
     if (sans) html += `<p class="frise-note" style="left:${X(debut)}px;top:50px">${sans} personne${sans > 1 ? 's' : ''} sans date connue ${sans > 1 ? 'ne figurent' : 'ne figure'} pas sur la frise.</p>`;
     svg.innerHTML = `<g class="frise-fond">${fond}</g><g class="frise-liens">${liens}</g><g class="frise-axe"><path class="axe-ligne" d="M${X(debut) - 10} 0 H${xb}"/>${axe}</g>`;
     cartesEl.innerHTML = html;
-    bornes = {x0: xa, x1: xb, y0: haut - 50, y1: 80};
+    bornes = {x0: xa, x1: xb, y0: haut - 50, y1: 80}; friseInfo = {debut, finA, PX, vis, haut};
+    majPeriode();
+  }
+
+  // 28/11/2026 (Laurent) : dans la frise, l'axe des années reste en bas de l'écran quand on remonte vers les anciennes générations
+  const axeEl = racineEl.querySelector('.axe-collant');
+  function majAxe() {
+    if (!axeEl) return;
+    const r = vue.getBoundingClientRect();
+    if (mode !== 'frise' || !friseInfo || ty < r.height - 40) { axeEl.hidden = true; return; }
+    const {debut, finA, PX} = friseInfo, dec = 10 * PX * k, pas = dec >= 46 ? 10 : dec * 5 >= 46 ? 50 : 100;
+    let h = `<path class="axe-ligne" d="M${Math.max(0, tx - 10 * k)} 12 H${Math.min(r.width, (finA - debut) * PX * k + tx)}"/>`;
+    for (let a = Math.ceil(debut / 10) * 10; a <= finA; a += 10) {
+      const x = (a - debut) * PX * k + tx; if (x < -30 || x > r.width + 30) continue;
+      const lab = a % pas === 0, c100 = a % 100 === 0;
+      if (dec >= 6 || lab) h += `<path class="tic" d="M${x.toFixed(1)} 12 V${lab ? 20 : 16}"/>`;
+      if (lab) h += `<text class="annee${c100 ? ' siecle' : ''}" x="${x.toFixed(1)}" y="36">${a}</text>`;
+    }
+    axeEl.innerHTML = `<svg width="${r.width}" height="44">${h}</svg>`; axeEl.hidden = false;
+  }
+
+  // ---------- 28/11/2026 (Laurent) : vue Carte. Chaque personne est un point posé sur son lieu de naissance (à défaut baptême,
+  // mariage, décès) ; chaque lieu se touche et donne la liste des personnes qui y ont un acte (naissance, mariage, décès, acte lu).
+  let FOND = null, fondEnCours = false;
+  const LIEUX = data.lieux || {};
+  const nomLieu = s => { const ps = String(s).split(/,(?![^(]*\))/).map(x => x.trim()); const q = ps.find(x => x.includes('(')) || ps[ps.length - 1]; return q.replace(/\s*\(.*$/, ''); };
+  const qualLieu = s => { const m = String(s).match(/\(([^)]*)\)/); return m ? m[1] : ''; };
+  const KC = Math.cos(rad(46.5)), SC = 230;
+  const proj = ([lon, lat]) => [lon * SC * KC, -lat * SC];
+  let lieuxVus = {};
+  function chargerFond() {
+    if (FOND || fondEnCours) return; fondEnCours = true;
+    import('./carte-fond.js').then(m => { FOND = m.FOND; if (mode === 'carte') { const g = svg.querySelector('.carte-fond'); if (g) { g.innerHTML = fondSVG(); g.animate([{opacity: 0}, {opacity: 1}], {duration: 500}); } } }).catch(() => {}).finally(() => { fondEnCours = false; });
+  }
+  function fondSVG() {
+    if (!FOND) return '';
+    const d = arr => { let s = ''; for (let i = 0; i < arr.length; i += 2) { const [x, y] = proj([arr[i] / 100, arr[i + 1] / 100]); s += (i ? 'L' : 'M') + x.toFixed(0) + ' ' + y.toFixed(0); } return s + 'Z'; };
+    return `<path class="terre" d="${FOND.terre.map(d).join('')}"/><path class="france" d="${FOND.fr.map(d).join('')}"/><path class="deps" d="${FOND.deps.map(d).join('')}"/>`;
+  }
+  function evenementsDe(id) {   // [{lieu, lib, an}]
+    const p = P[id], out = [], f = p.s === 'F' ? 'e' : '';
+    if (p.na && p.na.p) out.push({lieu: p.na.p, lib: `Né${f}`, an: an(p.na)});
+    if (p.ba && p.ba.p) out.push({lieu: p.ba.p, lib: `Baptisé${f}`, an: an(p.ba)});
+    for (const u of unions[id] || []) if (u.mar && u.mar.p) { const z = P[u.h === id ? u.w : u.h]; out.push({lieu: u.mar.p, lib: `Marié${f}` + (z && !z.cache ? ' avec ' + nomComplet(z) : ''), an: an(u.mar)}); }
+    if (p.de && p.de.p) out.push({lieu: p.de.p, lib: `Décédé${f}`, an: an(p.de)});
+    for (const [i] of p.ra || []) { const a = R[i]; if (a && a.lieu && !out.some(o => o.lieu === a.lieu && o.an === String(a.d || '').slice(0, 4) && a.ty && o.lib.toLowerCase().startsWith(String(a.ty).slice(0, 3).toLowerCase()))) out.push({lieu: a.lieu, lib: a.t || a.ty || 'Acte', an: String(a.d || '').slice(0, 4), acte: i}); }
+    return out.filter(o => LIEUX[o.lieu]);
+  }
+  function dessinerCarte() {
+    const Gm = tout ? 14 : 7, liste = [], vu = new Set(), file = [{id: focus, g: 0}];
+    while (file.length) {
+      const it = file.shift(); if (vu.has(it.id)) continue; vu.add(it.id);
+      const x = P[it.id]; if (!x || x.cache) continue; liste.push(it);
+      const f = parents[it.id]; if (it.g < Gm && f) [f.h, f.w].forEach(z => { if (z && P[z]) file.push({id: z, g: it.g + 1}); });
+    }
+    lieuxVus = {}; let sans = 0;
+    const cleL = s => LIEUX[s].map(v => v.toFixed(3)).join(',');
+    for (const it of liste) {
+      const ev = evenementsDe(it.id); if (!ev.length) { sans++; continue; }
+      it.ou = ev.find(e => /^Né|^Bapt/.test(e.lib)) || ev.find(e => /^Mari/.test(e.lib)) || ev[0];
+      for (const e of ev) { const k0 = cleL(e.lieu), L = lieuxVus[k0] = lieuxVus[k0] || {k: k0, noms: {}, c: proj(LIEUX[e.lieu]), gens: new Map(), dots: []}; L.noms[e.lieu] = 1; if (!L.gens.has(it.id)) L.gens.set(it.id, []); L.gens.get(it.id).push(e); }
+      lieuxVus[cleL(it.ou.lieu)].dots.push(it);
+    }
+    let html = '', pts = [];
+    for (const L of Object.values(lieuxVus)) {
+      const n = L.gens.size, [cx, cy] = L.c, nom = nomLieu(Object.keys(L.noms).sort((a, b) => a.length - b.length)[0]);
+      L.nom = nom; L.r = Math.max(9, 7 + 4.2 * Math.sqrt(L.dots.length));
+      L.dots.sort((a, b) => a.g - b.g).forEach((it, i) => {   // les personnes en tournesol autour du lieu
+        const a = i * 2.39996, r = i ? 6.2 * Math.sqrt(i) : 0, x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+        html += carteHTML(it.id, x - 6, y - 6, 'c', {g: it.g, w: 12, h: 12, fs: 1}, cle(it.id));
+        if (!positions[it.id]) positions[it.id] = {x: x - 6, y: y - 6, w: 12, h: 12, cx: x, cy: y};
+      });
+      html += `<button class="lieu-pt${n >= 3 ? ' grand' : ''}" data-lieu="${esc(L.k)}" style="left:${cx}px;top:${cy}px;--r:${L.r.toFixed(1)}px" aria-label="${esc(nom)} : ${n} personne${n > 1 ? 's' : ''}" title="${esc(nom)} (${n})"><span>${esc(nom)}</span></button>`;
+      pts.push([cx, cy]);
+    }
+    if (!pts.length) { svg.innerHTML = ''; cartesEl.innerHTML = '<p class="frise-vide">Aucun lieu situé sur la carte pour ces personnes.</p>'; bornes = {x0: -200, x1: 200, y0: -60, y1: 60}; return; }
+    if (sans) html += `<p class="frise-note carte-note" style="left:${Math.min(...pts.map(p => p[0]))}px;top:${Math.max(...pts.map(p => p[1])) + 40}px">${sans} personne${sans > 1 ? 's' : ''} sans lieu connu ${sans > 1 ? 'ne figurent' : 'ne figure'} pas sur la carte.</p>`;
+    svg.innerHTML = `<g class="carte-fond">${fondSVG()}</g>`;
+    cartesEl.innerHTML = html;
+    const dedans = pts.filter(([x, y]) => x >= proj([-15, 0])[0] && x <= proj([40, 0])[0] && y >= proj([0, 62])[1] && y <= proj([0, 30])[1]);   // le cadrage ignore les lieux lointains (Antilles, Amérique)
+    const xs = (dedans.length ? dedans : pts).map(p => p[0]), ys = (dedans.length ? dedans : pts).map(p => p[1]), m = 90;
+    bornes = {x0: Math.min(...xs) - m, x1: Math.max(...xs) + m, y0: Math.min(...ys) - m, y1: Math.max(...ys) + m};
+    chargerFond();
+  }
+  function ouvrirLieu(k0) {
+    const L = lieuxVus[k0]; if (!L) return;
+    const gens = [...L.gens.entries()].sort((a, b) => (+(a[1][0].an) || 9999) - (+(b[1][0].an) || 9999));
+    const quals = [...new Set(Object.keys(L.noms).map(qualLieu).filter(Boolean))];
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>${esc(L.nom)}${quals.length ? ` <small>(${esc(quals.join(', '))})</small>` : ''}</h2><button class="fermer">Fermer</button></div>
+      <p class="acte-ref">${gens.length} personne${gens.length > 1 ? 's' : ''} avec un acte ici, de la plus ancienne à la plus récente.</p>
+      <div class="liens actes lieu-liste">${gens.map(([id, evs]) => { const p = P[id], l = lignee(p);
+        return `<button data-voir="${esc(id)}"><span class="pt" style="background:${l && l !== 'ego' ? `var(--${l})` : 'var(--accent)'}"></span><span><b>${esc(nomComplet(p))}</b><small>${esc(evs.sort((a, b) => (+a.an || 0) - (+b.an || 0)).map(e => [e.lib, e.an].filter(Boolean).join(' ')).join(' · '))}</small></span></button>`; }).join('')}</div></div>`;
+    av.hidden = false; av.querySelector('.fermer').onclick = fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
+    av.querySelector('.fermer').focus();
+  }
+
+  // 28/11/2026 (Laurent) : « par la date ». Dans la frise, on choisit une année : un trait la marque, les personnes qui n'étaient
+  // pas en vie s'estompent, et la liste donne les vivants de cette année-là avec leur âge.
+  const perEl = racineEl.querySelector('.periode'), pAn = perEl.querySelector('#p-an'), pCur = perEl.querySelector('.p-curseur');
+  let anneeChoisie = null;
+  function majPeriode() {
+    const ok = mode === 'frise' && friseInfo; perEl.hidden = !ok; if (!ok) return;
+    const {debut, finA, vis, haut, PX} = friseInfo;
+    pCur.min = pAn.min = debut; pCur.max = pAn.max = finA;
+    perEl.querySelector('.p-corps').hidden = anneeChoisie === null; perEl.querySelector('.p-ouvrir').hidden = anneeChoisie !== null;
+    svg.querySelector('.frise-curseur')?.remove();
+    const vivants = new Set();
+    if (anneeChoisie !== null) {
+      const a = anneeChoisie; pCur.value = a; if (document.activeElement !== pAn) pAn.value = a;
+      vis.forEach(i => { if (i.b <= a && i.e >= a) vivants.add(i.id); });
+      const x = (a - debut) * PX, g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'frise-curseur');
+      g.innerHTML = `<path d="M${x} ${haut} V0"/><text x="${x}" y="${haut - 30}">${a}</text>`; svg.appendChild(g);
+      perEl.querySelector('[data-p=liste]').textContent = `Voir les ${vivants.size} personne${vivants.size > 1 ? 's' : ''}`;
+    }
+    cartesEl.querySelectorAll('.carte.f').forEach(c => c.classList.toggle('eteint', anneeChoisie !== null && !vivants.has(c.dataset.id)));
+  }
+  function choisirAnnee(a) {
+    if (!friseInfo) return; a = Math.round(+a); if (!isFinite(a)) return;
+    anneeChoisie = Math.max(friseInfo.debut, Math.min(friseInfo.finA, a)); majPeriode();
+  }
+  perEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-p]'); if (!b || !friseInfo) return;
+    if (b.dataset.p === 'ouvrir') { const r = vue.getBoundingClientRect(); choisirAnnee(friseInfo.debut + ((r.width / 2 - tx) / k) / friseInfo.PX); pCur.focus(); }
+    if (b.dataset.p === 'fermer') { anneeChoisie = null; majPeriode(); }
+    if (b.dataset.p === 'liste') listeVivants();
+  });
+  pCur.addEventListener('input', () => choisirAnnee(pCur.value));
+  pAn.addEventListener('change', () => choisirAnnee(pAn.value));
+  pAn.addEventListener('keydown', e => { if (e.key === 'Enter') choisirAnnee(pAn.value); });
+  function listeVivants() {
+    const a = anneeChoisie, L = friseInfo.vis.filter(i => i.b <= a && i.e >= a).sort((x, y) => x.b - y.b);
+    av.innerHTML = `<div class="acte-carte"><div class="acte-tete"><h2>En ${a}</h2><button class="fermer">Fermer</button></div>
+      <p class="acte-ref">${L.length} personne${L.length > 1 ? 's' : ''} de cet arbre ${L.length > 1 ? 'étaient' : 'était'} en vie, de la plus âgée à la plus jeune.</p>
+      <div class="liens actes lieu-liste">${L.map(i => { const p = P[i.id], l = lignee(p), age = a - i.b;
+        return `<button data-voir="${esc(i.id)}"><span class="pt" style="background:${l && l !== 'ego' ? `var(--${l})` : 'var(--accent)'}"></span><span><b>${esc(nomComplet(p))}</b><small>${i.estB ? 'environ ' : ''}${age ? age + ' an' + (age > 1 ? 's' : '') : 'naissance cette année-là'}${an(p.de) && +an(p.de) === a ? ', mort cette année-là' : ''}</small></span></button>`; }).join('')}</div></div>`;
+    av.hidden = false; av.querySelector('.fermer').onclick = fermerActe; av.onclick = e => { if (e.target === av) fermerActe(); };
+    av.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => { fermerActe(); voir(b.dataset.voir); });
+    av.querySelector('.fermer').focus();
   }
 
   // ---------- passage animé ----------
@@ -332,7 +474,7 @@ export function creerArbre(racineEl, data, opt = {}) {
   function finirAnims() {
     enCours.forEach(a => { try { a.finish(); } catch (e) {} }); enCours = [];
     cartesEl.querySelectorAll('.fantome').forEach(e => e.remove()); scene.querySelectorAll('svg.fantome-svg').forEach(e => e.remove());
-    cartesEl.querySelectorAll('.r-attente').forEach(e => e.classList.replace('r-attente', 'r'));
+    cartesEl.querySelectorAll('.r-attente').forEach(e => e.classList.replace('r-attente', 'r')); cartesEl.querySelectorAll('.c-attente').forEach(e => e.classList.replace('c-attente', 'c'));
     finirDecor();
   }
   const fsDe = el => getComputedStyle(el).getPropertyValue('--fs').trim() || '16px';
@@ -353,23 +495,58 @@ export function creerArbre(racineEl, data, opt = {}) {
     }
     return null;
   }
+  // 28/11/2026 (Laurent : « page précédente doit défaire la dernière action sur l'arbre ») : chaque changement de forme,
+  // de personne au centre ou de profondeur prend une entrée d'historique ; « précédent » la rejoue à l'envers, animée.
+  const etatArbre = () => ({mode, focus, tout, ouverts: {...ouverts}});
+  let enRetour = false;
+  function pousser() {
+    if (enRetour) return;
+    const e = etatArbre(), st = history.state || {};
+    if (st.ar && JSON.stringify(st.ar) === JSON.stringify(e)) return;
+    if (st.fiche && fiche.hidden) { const {fiche: _f, ...reste} = st; history.replaceState({...reste, ar: e}, ''); return; }   // la fiche vient de se fermer pour ce changement
+    history.pushState({...st, ar: e}, '');
+  }
+  function appliquerEtat(a) {
+    mode = MODES[a.mode] ? a.mode : 'arbre'; focus = P[a.focus] ? a.focus : ego; tout = !!a.tout; ouverts = {...(a.ouverts || {})};
+    try { localStorage.setItem('vr-mode', mode); } catch (x) {}
+    majModes(); const be = racineEl.querySelector('.ensemble [data-a=entier]'); if (be) be.textContent = tout ? 'Revenir à la vue simple' : 'Ouvrir l’arbre en entier';
+    dessiner(); if (focus === ego || tout) premiereVue(); else centrerSur(focus);
+  }
+  function surRetour(e) {
+    if (!racineEl.isConnected) { removeEventListener('popstate', surRetour); return; }
+    const a = e.state && e.state.ar; if (!a) return;
+    if (JSON.stringify(a) === JSON.stringify(etatArbre())) return;
+    enRetour = true; try { transition(() => appliquerEtat(a)); } finally { enRetour = false; }
+  }
+  addEventListener('popstate', surRetour);
   function transition(changer) {
     finirAnims();
     const ok = !reduit.matches && typeof Element.prototype.animate === 'function' && cartesEl.querySelectorAll('[data-k]').length < 450;
-    const av = ok ? releve() : null, cam0 = scene.style.transform, svg0 = ok ? svg.innerHTML : '';
+    const av = ok ? releve() : null, cam0 = {k, tx, ty, t: scene.style.transform}, svg0 = ok ? svg.innerHTML : '';
     changer();
+    pousser();
     if (av && cartesEl.querySelectorAll('[data-k]').length < 450) animer(av, cam0, svg0);
   }
   function animer(av, cam0, svg0) {
     const run = a => { enCours.push(a); return a; };
     const els = [...cartesEl.querySelectorAll('[data-k]')];
     // roue : les cartes gardent leur fond pendant le vol et le perdent en arrivant sur leur secteur
-    const attente = mode === 'roue' ? els.filter(el => el.classList.contains('r') && av[el.dataset.k] && !av[el.dataset.k].r) : [];
-    attente.forEach(el => el.classList.replace('r', 'r-attente'));
+    const cl = {roue: 'r', carte: 'c'}[mode];
+    const attente = cl ? els.filter(el => el.classList.contains(cl) && av[el.dataset.k] && !av[el.dataset.k].el.classList.contains(cl)) : [];
+    attente.forEach(el => el.classList.replace(cl, cl + '-attente'));
     const geo = els.map(el => ({el, k: el.dataset.k, id: el.dataset.k.split('~')[0], L: parseFloat(el.style.left) || 0, T: parseFloat(el.style.top) || 0,
       w: el.offsetWidth, h: el.offsetHeight, rot: +el.dataset.rot || 0, g: +el.dataset.g || 0, fs: fsDe(el)}));
     const neuf = {}; geo.forEach(x => { neuf[x.k] = x; });
-    run(scene.animate([{transform: cam0 || 'none'}, {transform: scene.style.transform || 'none'}], {duration: DUREE, easing: COURBE}));
+    // 28/11/2026 (Laurent) : la personne au centre garde sa place à l'écran pendant que l'arbre se transforme autour d'elle,
+    // puis la vue glisse jusqu'au cadrage final (la caméra garde l'échelle de départ pendant la métamorphose).
+    const o = av[focus], n = neuf[focus], camF = scene.style.transform || 'none';
+    if (o && n) {
+      const sx = o.cx * cam0.k + cam0.tx, sy = o.cy * cam0.k + cam0.ty, nx = n.L + n.w / 2, ny = n.T + n.h / 2;
+      const camM = `translate(${sx - nx * cam0.k}px,${sy - ny * cam0.k}px) scale(${cam0.k})`;
+      const Z = Math.abs(cam0.k - k) < 1e-3 && Math.abs(sx - nx * k - tx) < 2 && Math.abs(sy - ny * k - ty) < 2 ? 0 : 650, f = DUREE / (DUREE + Z);
+      run(scene.animate(Z ? [{transform: cam0.t || 'none', easing: COURBE}, {transform: camM, offset: f, easing: 'cubic-bezier(.45,0,.25,1)'}, {transform: camF}]
+                          : [{transform: cam0.t || 'none'}, {transform: camM}], {duration: DUREE + Z, easing: Z ? 'linear' : COURBE}));
+    } else run(scene.animate([{transform: cam0.t || 'none'}, {transform: camF}], {duration: DUREE, easing: COURBE}));
     for (const x of geo) {
       const o = av[x.k], delai = Math.min(Math.max(x.g, 0), 9) * 34;
       let de;
@@ -381,7 +558,7 @@ export function creerArbre(racineEl, data, opt = {}) {
       run(x.el.animate([de, {transform: `translate(0px,0px) rotate(${x.rot}deg)`, width: x.w + 'px', height: x.h + 'px', '--fs': x.fs, opacity: 1}],
         {duration: DUREE, delay: delai, easing: COURBE, fill: 'backwards'}));
     }
-    if (attente.length) setTimeout(() => attente.forEach(el => el.classList.replace('r-attente', 'r')), DUREE * 0.5);
+    if (attente.length) setTimeout(() => attente.forEach(el => el.classList.replace(cl + '-attente', cl)), DUREE * 0.5);
     for (const k0 in av) if (!neuf[k0]) {   // les cartes qui quittent la vue rentrent dans leur enfant
       const o = av[k0], el = o.el;
       el.classList.add('fantome'); el.removeAttribute('data-id'); el.removeAttribute('data-k'); el.setAttribute('aria-hidden', 'true'); el.tabIndex = -1;
@@ -396,11 +573,11 @@ export function creerArbre(racineEl, data, opt = {}) {
       const gs = document.createElementNS(NS, 'svg'); gs.setAttribute('class', 'fantome-svg'); gs.innerHTML = svg0; scene.insertBefore(gs, svg);
       const fx = gs.animate([{opacity: 1}, {opacity: 0}], {duration: 300, easing: 'ease-out', fill: 'forwards'}); fx.onfinish = () => gs.remove(); run(fx);
     }
-    cartesEl.querySelectorAll('.anneau,.plus,.titre-enfants,.frise-note').forEach(e => run(e.animate([{opacity: 0}, {opacity: 1}], {duration: 320, delay: DUREE * 0.75, fill: 'backwards'})));
+    cartesEl.querySelectorAll('.anneau,.plus,.titre-enfants,.frise-note,.lieu-pt').forEach(e => run(e.animate([{opacity: 0}, {opacity: 1}], {duration: 320, delay: DUREE * 0.75, fill: 'backwards'})));
     entreeDecor(run);
   }
   function entreeDecor(run) {
-    if (mode === 'arbre') { run(svg.animate([{opacity: 0}, {opacity: 1}], {duration: 420, delay: DUREE * 0.62, fill: 'backwards'})); return; }
+    if (mode === 'arbre' || mode === 'carte') { run(svg.animate([{opacity: 0}, {opacity: 1}], {duration: 420, delay: DUREE * (mode === 'carte' ? 0.2 : 0.62), fill: 'backwards'})); return; }
     if (mode === 'frise') {
       [['.frise-fond', 140], ['.frise-axe', 0], ['.frise-liens', DUREE * 0.72]].forEach(([q, d]) => { const g = svg.querySelector(q); if (g) run(g.animate([{opacity: 0}, {opacity: 1}], {duration: 460, delay: d, fill: 'backwards'})); });
       const axe = svg.querySelector('.axe-ligne');
@@ -439,6 +616,7 @@ export function creerArbre(racineEl, data, opt = {}) {
   function appliquer() {
     scene.style.transform = `translate(${tx}px,${ty}px) scale(${k})`;
     vue.classList.toggle('compact', mode === 'arbre' && k < 0.5);
+    majAxe(); scene.style.setProperty('--ki', String(Math.min(3, 1 / k)));
     try { localStorage.setItem('vr-vue-' + data.id, JSON.stringify({tx, ty, k, focus})); } catch (e) {}
   }
   function centrerSur(id, kk = k) {
@@ -460,7 +638,7 @@ export function creerArbre(racineEl, data, opt = {}) {
       k = Math.max(innerWidth < 720 ? 0.8 : 0.3, Math.min(1, (r.width - 40) / lg));
       tx = r.width / 2 - (k * lg <= r.width - 40 ? (bornes.x0 + bornes.x1) / 2 : positions[focus] ? positions[focus].cx : bornes.x1 - (r.width / 2 - 20) / k) * k; ty = r.height - 24 - bornes.y1 * k; appliquer(); return;
     }
-    toutVoir(); if (mode === 'roue') return;
+    toutVoir(); if (mode === 'roue' || mode === 'carte') return;
     const mini = mode === 'frise' ? (innerWidth < 720 ? 0.5 : 0.42) : (innerWidth < 720 ? 0.62 : 0.45);
     if (k < mini) centrerSur(mode === 'frise' ? focus : ego, mini);
   }
@@ -492,6 +670,7 @@ export function creerArbre(racineEl, data, opt = {}) {
   vue.addEventListener('wheel', e => { e.preventDefault(); const r = vue.getBoundingClientRect(); zoomer(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top); }, {passive: false});
   vue.addEventListener('click', e => {
     if (bouge) { bouge = false; return; }
+    const lp = e.target.closest('[data-lieu]'); if (lp) { ouvrirLieu(lp.dataset.lieu); return; }
     const li = e.target.closest('[data-lien]'); if (li) { ouvrirLien(li.dataset.lien); return; }
     const pl = e.target.closest('[data-plus]');
     if (pl) { const id = pl.dataset.plus; const n = positions[id]; transition(() => { ouverts[id] = (n ? n.g : 0) + PLUS; dessiner(); centrerSur(id); }); return; }
@@ -610,7 +789,7 @@ export function creerArbre(racineEl, data, opt = {}) {
     fiche.hidden = false; fiche.classList.remove('pleine');
     fiche.querySelector('.fermer').onclick = fermerFiche;
     fiche.querySelector('.poignee').onclick = () => fiche.classList.toggle('pleine');
-    fiche.querySelector('[data-recentrer]').onclick = () => { fermerFiche(); recentrer(id); };
+    fiche.querySelector('[data-recentrer]').onclick = () => { fiche.hidden = true; choisi = null; recentrer(id); };
     fiche.querySelectorAll('[data-voir]').forEach(b => b.onclick = () => voir(b.dataset.voir));
     fiche.querySelectorAll('[data-acte]').forEach(b => b.onclick = () => ouvrirActe(+b.dataset.acte));
     fiche.querySelectorAll('[data-reg]').forEach(b => b.onclick = () => ouvrirRegistre(b.dataset.reg));
@@ -776,6 +955,9 @@ export function creerArbre(racineEl, data, opt = {}) {
   function choisir(i) { const x = res[i]; if (!x) return; ul.hidden = true; inp.value = ''; inp.blur(); voir(x.id); }
 
   // ---------- démarrage ----------
+  { const st = history.state || {};
+    if (st.ar && (!st.p || st.id === data.id)) { const a = st.ar; mode = MODES[a.mode] ? a.mode : mode; focus = P[a.focus] ? a.focus : ego; tout = !!a.tout; ouverts = {...(a.ouverts || {})}; majModes(); if (tout) { const be = racineEl.querySelector('.ensemble [data-a=entier]'); if (be) be.textContent = 'Revenir à la vue simple'; } }
+    else history.replaceState({...st, ar: etatArbre()}, ''); }
   dessiner();
   // 03/11/2026 (Laurent : « quand on ouvre la page de l'arbre, il faut qu'il soit centré ») : on n'ouvre plus sur la dernière
   // position déplacée (souvenir de l'appareil), mais toujours centré sur la personne du livre ; et on recentre une fois la

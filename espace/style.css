@@ -664,6 +664,8 @@ i.vs-a,path.vs-a{background:#8A3A17;fill:#8A3A17}
 .carte.f .lieu,.carte.f .preuve{display:none}
 .carte.f.etroit .dates{display:none}
 .carte.f.estime{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 50px),rgba(0,0,0,.2));mask-image:linear-gradient(90deg,#000 calc(100% - 50px),rgba(0,0,0,.2))}
+.carte.f.estime-debut{-webkit-mask-image:linear-gradient(270deg,#000 calc(100% - 50px),rgba(0,0,0,.2));mask-image:linear-gradient(270deg,#000 calc(100% - 50px),rgba(0,0,0,.2))}
+.carte.f.estime.estime-debut{-webkit-mask-image:linear-gradient(90deg,rgba(0,0,0,.2),#000 50px,#000 calc(100% - 50px),rgba(0,0,0,.2));mask-image:linear-gradient(90deg,rgba(0,0,0,.2),#000 50px,#000 calc(100% - 50px),rgba(0,0,0,.2))}
 .carte.f.ego::after{top:-12px;font-size:12px;padding:1px 8px}
 .carte.f .etoile{top:-9px;left:-7px;width:18px;height:18px;font-size:11px;line-height:18px}
 .scene svg text{font-family:var(--f-ui)}
@@ -685,3 +687,45 @@ i.vs-a,path.vs-a{background:#8A3A17;fill:#8A3A17}
 @media print{.modes{display:none}}
 .legende .corps{max-height:calc(100dvh - 320px)}
 @media (max-width:719px){.legende .corps{max-height:calc(100dvh - 320px)}}
+.axe-collant{position:fixed;left:0;right:0;bottom:0;height:44px;z-index:6;pointer-events:none;background:linear-gradient(to top,rgba(251,246,236,.97) 72%,rgba(251,246,236,0))}
+.axe-collant svg{display:block}
+.axe-collant .axe-ligne{stroke:var(--ink-soft);stroke-width:2;fill:none}
+.axe-collant .tic{stroke:var(--ink-soft);stroke-width:1.2}
+.axe-collant .annee{fill:var(--ink-soft);font:14px var(--f-ui);text-anchor:middle;font-variant-numeric:tabular-nums}
+.axe-collant .annee.siecle{fill:var(--ink);font-weight:700;font-size:15px}
+@media print{.axe-collant{display:none}}
+/* 28/11/2026 : vue Carte */
+.carte.c,.carte.c-attente{padding:0;border-radius:50%;font-size:0;overflow:hidden}
+.carte.c .nom,.carte.c .dates,.carte.c .lieu,.carte.c .preuve,.carte.c .etoile,.carte.c-attente .lieu,.carte.c-attente .preuve,.carte.c-attente .etoile{display:none}
+.carte.c::before,.carte.c::after{display:none}
+.carte.c{background-size:100% 0!important;background-color:var(--accent);border:1.5px solid var(--paper);box-shadow:0 1px 2px rgba(46,33,23,.25)}
+.carte.c.l1{background-color:var(--l1)} .carte.c.l2{background-color:var(--l2)} .carte.c.l3{background-color:var(--l3)} .carte.c.l4{background-color:var(--l4)}
+.carte.c.pepite{box-shadow:0 0 0 1.5px #E3A93F,0 0 8px 3px rgba(227,169,63,.6)}
+.carte.c.choisie{border-color:var(--ink)}
+.lieu-pt{position:absolute;width:calc(var(--r) * 2);height:calc(var(--r) * 2);margin:calc(var(--r) * -1) 0 0 calc(var(--r) * -1);border-radius:50%;border:1.5px solid rgba(90,58,34,.35);background:rgba(255,252,245,.25);padding:0;cursor:pointer}
+.lieu-pt:hover{border-color:var(--accent);background:rgba(255,252,245,.5)}
+.lieu-pt span{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;white-space:nowrap;font:600 calc(12px * var(--ki,1)) var(--f-ui);color:var(--ink);text-shadow:0 0 3px var(--bg),0 0 3px var(--bg),0 0 2px var(--bg);display:none;pointer-events:none}
+.lieu-pt.grand span,.lieu-pt:hover span{display:block}
+.carte-fond .terre{fill:var(--bg-2);stroke:var(--line);stroke-width:1}
+.carte-fond .france{fill:var(--paper);stroke:var(--line-strong);stroke-width:1.4}
+.carte-fond .deps{fill:none;stroke:var(--line);stroke-width:.8;stroke-dasharray:3 3}
+.lieu-liste .pt{width:12px;height:12px;border-radius:50%;flex:none;margin-top:4px}
+.lieu-liste button{display:flex;gap:10px;align-items:flex-start}
+.lieu-liste small{display:block;color:var(--ink-soft)}
+/* 28/11/2026 : frise, « qui vivait en… » */
+.periode{left:50%;transform:translateX(-50%);bottom:58px;padding:6px;border-radius:12px;display:flex;align-items:center;gap:8px;max-width:calc(100vw - 24px)}
+.periode button{min-height:40px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:0 12px;font:600 15px var(--f-ui);color:var(--ink)}
+.periode .p-ouvrir{border:0}
+.periode .p-corps:not([hidden]){display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.periode label{font-weight:600}
+.periode input[type=number]{width:84px;min-height:40px;font:600 17px var(--f-ui);padding:4px 8px}
+.periode input[type=range]{width:min(320px,40vw);accent-color:var(--accent)}
+@media (max-width:719px){.periode{bottom:110px}.periode input[type=range]{width:100%}}
+.carte.f{transition:opacity .25s,background-size .45s ease,background-color .45s ease,border-color .45s ease,box-shadow .45s ease}
+.carte.f.eteint{opacity:.22}
+.frise-curseur path{stroke:var(--accent);stroke-width:2.5;fill:none}
+.frise-curseur text{fill:var(--accent);font:700 18px var(--f-ui);text-anchor:middle}
+@media print{.periode{display:none}}
+/* 28/11/2026 : sommaire cliquable dans la relecture */
+.pg-lien{position:absolute;background:transparent;border:0;border-radius:4px;padding:0;cursor:pointer;z-index:2}
+.pg-lien:hover,.pg-lien:focus-visible{background:rgba(168,68,30,.10);outline:1px solid rgba(168,68,30,.45)}
